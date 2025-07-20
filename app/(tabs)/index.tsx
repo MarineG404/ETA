@@ -1,30 +1,38 @@
-import {
-	ScrollView,
-	StyleSheet
-} from "react-native";
+import { useEffect, useState } from 'react';
+import { ScrollView, ViewStyle } from 'react-native';
+import moment from 'moment-timezone';
+import { ThemedSafeAreaView } from '@/components/Themed/ThemedSafeAreaView';
+import { ThemedText } from '@/components/Themed/ThemedText';
+import { getCurrentTimezone } from '@/utils/getCurrentTimezone';
+
+
 export default function HomeScreen() {
-	return (
-		<ScrollView>
+	const [timezone, setTimezone] = useState('');
+	const [localTime, setLocalTime] = useState('');
+	useEffect(() => {
+		const tz = getCurrentTimezone();
+		console.log('Fuseau:', tz);
 
-		</ScrollView>
-	)
-}
+		console.log('Heure locale (moment local):', moment().format('HH:mm'));
+		console.log('Heure en tz:', moment().tz(tz).format('HH:mm'));
 
-const styles = StyleSheet.create({
-	titleContainer: {
-		flexDirection: 'row',
+		setTimezone(tz);
+		setLocalTime(moment().tz(tz).format('HH:mm'));
+	}, []);
+
+
+	const containerStyle: ViewStyle = {
+		flex: 1,
+		justifyContent: 'center',
 		alignItems: 'center',
-		gap: 8,
-	},
-	stepContainer: {
-		gap: 8,
-		marginBottom: 8,
-	},
-	reactLogo: {
-		height: 178,
-		width: 290,
-		bottom: 0,
-		left: 0,
-		position: 'absolute',
-	},
-});
+		padding: 16,
+	};
+
+	return (
+		<ThemedSafeAreaView style={containerStyle} lightColor="#fff" darkColor="#000">
+			<ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
+				<ThemedText>Coucou ! Il est {localTime} sur le fuseau {timezone}</ThemedText>
+			</ScrollView>
+		</ThemedSafeAreaView>
+	);
+}
