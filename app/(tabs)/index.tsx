@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, ViewStyle } from 'react-native';
+import { ScrollView, ViewStyle, StyleSheet } from 'react-native';
 import moment from 'moment-timezone';
 import { ThemedSafeAreaView } from '@/components/Themed/ThemedSafeAreaView';
 import { ThemedText } from '@/components/Themed/ThemedText';
@@ -22,24 +22,17 @@ export default function HomeScreen() {
 		return () => clearInterval(interval);
 	}, []);
 
-	const containerStyle: ViewStyle = {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: 16,
-	};
-
 	const CitiesInZone = ({ timezone }: { timezone: string }) => {
 		const cities = getTimezoneData(timezone);
 
 		if (cities.length === 0) {
-			return <ThemedText>Aucune ville trouvée pour ce fuseau.</ThemedText>;
+			return <ThemedText style={styles.noCityText}>Aucune ville trouvée pour ce fuseau.</ThemedText>;
 		}
 
 		return (
-			<ScrollView contentContainerStyle={{ paddingVertical: 16 }}>
+			<ScrollView contentContainerStyle={styles.citiesContainer} style={styles.citiesScroll}>
 				{cities.map(({ city, country }, index) => (
-					<ThemedText key={index}>
+					<ThemedText key={index} style={styles.cityText}>
 						{city} {country ? `- ${country}` : ''}
 					</ThemedText>
 				))}
@@ -48,11 +41,57 @@ export default function HomeScreen() {
 	};
 
 	return (
-		<ThemedSafeAreaView style={containerStyle} lightColor="#fff" darkColor="#000">
-			<ThemedText style={{ fontSize: 18, marginBottom: 8 }}>
-				Coucou ! Il est {localTime} sur le fuseau {timezone}
+		<ThemedSafeAreaView style={styles.container} lightColor="#fff" darkColor="#000">
+			<ThemedText style={styles.headerText}>
+				Coucou ! Il est actuellement {localTime} sur le fuseau {timezone}
 			</ThemedText>
+
+			<ThemedText style={styles.subHeaderText}>
+				Voici quelques villes dans ce fuseau horaire :
+			</ThemedText>
+
 			<CitiesInZone timezone={timezone} />
+
+			<ThemedText style={styles.subHeaderText}>
+				Les villes où il est actuellement 18h00 :
+			</ThemedText>
 		</ThemedSafeAreaView>
 	);
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		padding: 16,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	headerText: {
+		fontSize: 18,
+		marginBottom: 12,
+		textAlign: 'center',
+	},
+	subHeaderText: {
+		fontSize: 16,
+		marginBottom: 8,
+		textAlign: 'center',
+	},
+	citiesScroll: {
+		width: '100%',
+		maxHeight: 200,
+	},
+	citiesContainer: {
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+	},
+	cityText: {
+		fontSize: 14,
+		marginBottom: 6,
+	},
+	noCityText: {
+		fontSize: 14,
+		fontStyle: 'italic',
+		textAlign: 'center',
+		marginTop: 8,
+	},
+});
