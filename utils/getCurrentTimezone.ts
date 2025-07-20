@@ -1,8 +1,8 @@
 interface LocalizationWithTimezone {
-  timezone: string;
+	timezone: string;
 }
 
 export function getCurrentTimezone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+	return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 
