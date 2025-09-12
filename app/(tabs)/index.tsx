@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, ViewStyle, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import moment from 'moment-timezone';
 import { ThemedSafeAreaView } from '@/components/Themed/ThemedSafeAreaView';
 import { ThemedText } from '@/components/Themed/ThemedText';
 import { getCurrentTimezone } from '@/utils/getCurrentTimezone';
-import { getTimezoneData } from '@/utils/getTimezoneData';
+import { DateTime } from "luxon";
+import { CitiesZone } from '@/components/home/CitiesZone';
+
 
 export default function HomeScreen() {
-	const [timezone, setTimezone] = useState('');
+	const aperoStart = '18:00';
+	const aperoEnd = '19:30';
+	const [localTimezone, setLocalTimezone] = useState('');
 	const [localTime, setLocalTime] = useState('');
 
 	useEffect(() => {
 		const tz = getCurrentTimezone();
-		setTimezone(tz);
+		setLocalTimezone(tz);
 		setLocalTime(moment().tz(tz).format('HH:mm'));
 
 		const interval = setInterval(() => {
@@ -22,35 +26,24 @@ export default function HomeScreen() {
 		return () => clearInterval(interval);
 	}, []);
 
-	const CitiesInZone = ({ timezone }: { timezone: string }) => {
-		const cities = getTimezoneData(timezone);
 
-		if (cities.length === 0) {
-			return <ThemedText style={styles.noCityText}>Aucune ville trouvée pour ce fuseau.</ThemedText>;
+	const timeZoneList: string[] = moment.tz.names();
+
+	for (const timezone of timeZoneList) {
+		const hourStr = DateTime.utc().setZone(timezone).toFormat('HH:mm');
+		if (hourStr >= aperoStart && hourStr <= aperoEnd) {
+			console.log(`Il est l'heure de l'apéro à ${timezone} (${hourStr})`);
 		}
+	}
 
-		return (
-			<ScrollView contentContainerStyle={styles.citiesContainer} style={styles.citiesScroll}>
-				{cities.map(({ city, country }, index) => (
-					<ThemedText key={index} style={styles.cityText}>
-						{city} {country ? `- ${country}` : ''}
-					</ThemedText>
-				))}
-			</ScrollView>
-		);
-	};
 
 	return (
 		<ThemedSafeAreaView style={styles.container} lightColor="#fff" darkColor="#000">
 			<ThemedText style={styles.headerText}>
-				Coucou ! Il est actuellement {localTime} sur le fuseau {timezone}
+				Coucou ! Il est actuellement {localTime} sur le fuseau {localTimezone}
 			</ThemedText>
 
-			<ThemedText style={styles.subHeaderText}>
-				Voici quelques villes dans ce fuseau horaire :
-			</ThemedText>
-
-			<CitiesInZone timezone={timezone} />
+			<CitiesZone localTimezone={localTimezone} />
 
 			<ThemedText style={styles.subHeaderText}>
 				Les villes où il est actuellement 18h00 :
