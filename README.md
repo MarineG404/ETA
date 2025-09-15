@@ -52,6 +52,8 @@ npm install
 yarn install
 ```
 
+BDD -> sqlite3 ./assets/apero.db < ./assets/full_seed.sql
+
 ### 3. Lancer le projet
 
 ```bash
