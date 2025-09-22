@@ -5,6 +5,7 @@ import { getCurrentTimezone } from '@/utils/getCurrentTimezone';
 import { getCitiesWithTimezones, CityWithTimezone } from '@/utils/db';
 import { getCitiesForApero } from '@/utils/apero';
 import { DateTime } from 'luxon';
+import { ScrollView, StyleSheet } from 'react-native';
 
 export default function HomeScreen() {
 	const [localTimezone, setLocalTimezone] = useState('');
