@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
 import moment from 'moment-timezone';
 import { ThemedSafeAreaView } from '@/components/Themed/ThemedSafeAreaView';
 import { ThemedText } from '@/components/Themed/ThemedText';
 import { getCurrentTimezone } from '@/utils/getCurrentTimezone';
 import { DateTime } from "luxon";
 import { CitiesZone } from '@/components/home/CitiesZone';
+import { StyleSheet } from 'react-native';
 
 
 export default function HomeScreen() {
@@ -26,16 +26,15 @@ export default function HomeScreen() {
 		return () => clearInterval(interval);
 	}, []);
 
-
-	const timeZoneList: string[] = moment.tz.names();
-
-	for (const timezone of timeZoneList) {
-		const hourStr = DateTime.utc().setZone(timezone).toFormat('HH:mm');
-		if (hourStr >= aperoStart && hourStr <= aperoEnd) {
-			console.log(`Il est l'heure de l'apéro à ${timezone} (${hourStr})`);
-		}
-	}
-
+	useEffect(() => {
+		const timeZoneList: string[] = moment.tz.names();
+		timeZoneList.forEach((timezone) => {
+			const hourStr = DateTime.now().setZone(timezone).toFormat('HH:mm');
+			if (hourStr >= aperoStart && hourStr <= '19:59') {
+				console.log(`Il est l'heure de l'apéro à ${timezone} (${hourStr})`);
+			}
+		});
+	}, []);
 
 	return (
 		<ThemedSafeAreaView style={styles.container} lightColor="#fff" darkColor="#000">
