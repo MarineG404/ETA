@@ -1,39 +1,44 @@
 import React, { useEffect, useState } from 'react';
-import moment from 'moment-timezone';
 import { ThemedSafeAreaView } from '@/components/Themed/ThemedSafeAreaView';
 import { ThemedText } from '@/components/Themed/ThemedText';
 import { getCurrentTimezone } from '@/utils/getCurrentTimezone';
-import { DateTime } from "luxon";
-import { CitiesZone } from '@/components/home/CitiesZone';
-import { StyleSheet } from 'react-native';
-
+import { getCitiesWithTimezones, CityWithTimezone } from '@/utils/db';
+import { getCitiesForApero } from '@/utils/apero';
+import { DateTime } from 'luxon';
 
 export default function HomeScreen() {
-	const aperoStart = '18:00';
-	const aperoEnd = '19:30';
 	const [localTimezone, setLocalTimezone] = useState('');
 	const [localTime, setLocalTime] = useState('');
+	const [aperoCities, setAperoCities] = useState<CityWithTimezone[]>([]);
 
+	// 🔹 Heure locale
 	useEffect(() => {
 		const tz = getCurrentTimezone();
 		setLocalTimezone(tz);
-		setLocalTime(moment().tz(tz).format('HH:mm'));
+		setLocalTime(DateTime.now().setZone(tz).toFormat('HH:mm'));
 
 		const interval = setInterval(() => {
-			setLocalTime(moment().tz(tz).format('HH:mm'));
+			setLocalTime(DateTime.now().setZone(tz).toFormat('HH:mm'));
 		}, 60000);
 
 		return () => clearInterval(interval);
 	}, []);
 
+	// 🔹 Charger les villes depuis la DB et filtrer celles où c'est l'apéro
 	useEffect(() => {
-		const timeZoneList: string[] = moment.tz.names();
-		timeZoneList.forEach((timezone) => {
-			const hourStr = DateTime.now().setZone(timezone).toFormat('HH:mm');
-			if (hourStr >= aperoStart && hourStr <= '19:59') {
-				console.log(`Il est l'heure de l'apéro à ${timezone} (${hourStr})`);
+		const fetchCities = async () => {
+			try {
+				const cities = await getCitiesWithTimezones(); // ✅ utilisation async/await
+				const filtered = getCitiesForApero(cities);
+				setAperoCities(filtered);
+			} catch (error) {
+				console.error('Erreur en récupérant les villes :', error);
 			}
-		});
+		};
+
+		fetchCities();
+		const interval = setInterval(fetchCities, 60000);
+		return () => clearInterval(interval);
 	}, []);
 
 	return (
@@ -42,11 +47,21 @@ export default function HomeScreen() {
 				Coucou ! Il est actuellement {localTime} sur le fuseau {localTimezone}
 			</ThemedText>
 
-			<CitiesZone localTimezone={localTimezone} />
-
 			<ThemedText style={styles.subHeaderText}>
-				Les villes où il est actuellement 18h00 :
+				Les villes où il est actuellement l'heure de l'apéro :
 			</ThemedText>
+
+			<ScrollView style={styles.citiesScroll}>
+				{aperoCities.length > 0 ? (
+					aperoCities.map((city) => (
+						<ThemedText key={city.name} style={styles.cityText}>
+							{city.name} ({city.timezone})
+						</ThemedText>
+					))
+				) : (
+					<ThemedText style={styles.noCityText}>Aucune ville pour l'instant 😢</ThemedText>
+				)}
+			</ScrollView>
 		</ThemedSafeAreaView>
 	);
 }
@@ -55,7 +70,6 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		padding: 16,
-		justifyContent: 'center',
 		alignItems: 'center',
 	},
 	headerText: {
@@ -70,11 +84,7 @@ const styles = StyleSheet.create({
 	},
 	citiesScroll: {
 		width: '100%',
-		maxHeight: 200,
-	},
-	citiesContainer: {
-		paddingVertical: 8,
-		paddingHorizontal: 12,
+		maxHeight: 300,
 	},
 	cityText: {
 		fontSize: 14,
