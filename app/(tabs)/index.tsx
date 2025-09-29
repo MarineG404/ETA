@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ThemedSafeAreaView } from '@/components/Themed/ThemedSafeAreaView';
-import { ThemedText } from '@/components/Themed/ThemedText';
 import { getCurrentTimezone } from '@/utils/getCurrentTimezone';
 import { getCitiesWithTimezones, CityWithTimezone } from '@/utils/db';
 import { getCitiesForApero } from '@/utils/apero';
 import { DateTime } from 'luxon';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from '@/constants/Colors';
 
 export default function HomeScreen() {
 	const [localTimezone, setLocalTimezone] = useState('');
@@ -43,27 +43,27 @@ export default function HomeScreen() {
 	}, []);
 
 	return (
-		<ThemedSafeAreaView style={styles.container} lightColor="#fff" darkColor="#000">
-			<ThemedText style={styles.headerText}>
+		<SafeAreaView style={styles.container}>
+			<Text style={styles.headerText}>
 				Coucou ! Il est actuellement {localTime} sur le fuseau {localTimezone}
-			</ThemedText>
+			</Text>
 
-			<ThemedText style={styles.subHeaderText}>
+			<Text style={styles.subHeaderText}>
 				Les villes où il est actuellement l'heure de l'apéro :
-			</ThemedText>
+			</Text>
 
 			<ScrollView style={styles.citiesScroll}>
 				{aperoCities.length > 0 ? (
 					aperoCities.map((city) => (
-						<ThemedText key={city.name} style={styles.cityText}>
+						<Text key={city.name} style={styles.cityText}>
 							{city.name} ({city.timezone})
-						</ThemedText>
+						</Text>
 					))
 				) : (
-					<ThemedText style={styles.noCityText}>Aucune ville pour l'instant 😢</ThemedText>
+					<Text style={styles.noCityText}>Aucune ville pour l'instant 😢</Text>
 				)}
 			</ScrollView>
-		</ThemedSafeAreaView>
+		</SafeAreaView>
 	);
 }
 
@@ -72,16 +72,19 @@ const styles = StyleSheet.create({
 		flex: 1,
 		padding: 16,
 		alignItems: 'center',
+		backgroundColor: COLORS.background,
 	},
 	headerText: {
 		fontSize: 18,
 		marginBottom: 12,
 		textAlign: 'center',
+		color: COLORS.primary,
 	},
 	subHeaderText: {
 		fontSize: 16,
 		marginBottom: 8,
 		textAlign: 'center',
+		color: COLORS.secondary,
 	},
 	citiesScroll: {
 		width: '100%',
@@ -90,6 +93,7 @@ const styles = StyleSheet.create({
 	cityText: {
 		fontSize: 14,
 		marginBottom: 6,
+		color: COLORS.text,
 	},
 	noCityText: {
 		fontSize: 14,
