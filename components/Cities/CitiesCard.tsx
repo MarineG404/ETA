@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CityData } from '@/utils/aperoDb';
-import { COLORS } from '@/constants/Colors';
+import { useAppColors } from '@/constants/Colors';
 import { DateTime } from 'luxon';
 
 type CitiesCardProps = {
 	city: CityData;
 };
+
+const COLORS = useAppColors(); // ✅ palette dynamique
+
 
 export const CitiesCard: React.FC<CitiesCardProps> = ({ city }) => {
 	const getSpecial = (type: 'cocktail' | 'mocktail' | 'food') =>

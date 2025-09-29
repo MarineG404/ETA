@@ -1,6 +1,8 @@
 import { ScrollView, StyleSheet, Text } from "react-native";
 import { getTimezoneData } from "@/utils/getTimezoneData";
-import { COLORS } from "@/constants/Colors";
+import { useAppColors } from "@/constants/Colors";
+
+const COLORS = useAppColors(); // ✅ palette dynamique
 
 export function CitiesZone({ localTimezone }: { localTimezone: string }) {
 

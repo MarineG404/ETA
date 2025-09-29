@@ -3,10 +3,13 @@ import { resetDatabase, getCityData, CityData } from '@/utils/aperoDb';
 import CitiesCard from '@/components/Cities/CitiesCard';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { COLORS } from '@/constants/Colors';
 import { getCitiesForApero } from '@/utils/apero';
+import { useAppColors } from "@/constants/Colors";
+
+const COLORS = useAppColors(); // ✅ palette dynamique
 
 export default function HomeScreen() {
+
 	const [cities, setCities] = useState<CityData[]>([]);
 
 	// 🔹 Init DB + fetch

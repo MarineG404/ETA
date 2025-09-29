@@ -1,14 +1,27 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+import { useColorScheme } from "react-native";
 
 
-export const COLORS = {
-  primary: "#B87333",       // Cuivre / Ambre foncé
-  secondary: "#6B4226",     // Brun chocolat
-  background: "#FAF5EF",    // Beige clair
-  cardBackground: "#F4EDE4",// Blanc chaud
-  text: "#1E1E1E",          // Noir doux
-  textSecondary: "#8C6A50", // Brun chaud
+export const COLORS_LIGHT = {
+	primary: "#FF6B35",        // Orange/corail vif pour les boutons
+	secondary: "#8B4513",      // Brun caramel pour textes secondaires
+	background: "#FFF8E7",     // Crème très clair, mousse de bière
+	cardBackground: "#FFFFFF", // Blanc pur pour les cartes
+	text: "#2C1810",           // Brun très foncé pour texte
+	textSecondary: "#8B6F47",  // Brun moyen pour secondaire
+	accent: "#FFFFFF",         // Blanc pur pour les bulles
+};
+
+export const COLORS_DARK = {
+	primary: "#9D2235",
+	secondary: "#B8860B",
+	background: "#2A0F14",     // Bordeaux très foncé mais clairement ROUGE
+	cardBackground: "#1A0A0D", // Noir-prune pour contraste
+	text: "#FAFAFA",
+	textSecondary: "#A39783",
+	accent: "#C77DFF",
+};
+
+export const useAppColors = () => {
+	const scheme = useColorScheme(); // 'light' | 'dark'
+	return scheme === 'dark' ? COLORS_DARK : COLORS_LIGHT;
 };
