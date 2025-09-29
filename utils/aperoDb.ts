@@ -1,122 +1,85 @@
-// utils/db.ts
-import 'setimmediate';
+// utils/aperoDb.ts
+import { SQLiteDatabase } from 'expo-sqlite';
 import * as SQLite from 'expo-sqlite';
 
-export type CityWithTimezone = { name: string; timezone: string };
+export type SpecialItem = {
+	type: 'cocktail' | 'mocktail' | 'food';
+	name: string;
+};
 
-let db: SQLite.SQLiteDatabase | null = null;
-let dbReady: Promise<SQLite.SQLiteDatabase> | null = null;
+export type CityData = {
+	city: string;
+	timezone: string;
+	specials: SpecialItem[];
+};
 
-// --- helpers
-async function tableInfo(db: SQLite.SQLiteDatabase, table: string) {
-	return db.getAllAsync<{ cid: number; name: string; type: string; notnull: number; dflt_value: any; pk: number }>(
-		`PRAGMA table_info(${table});`
-	);
-}
-async function hasColumn(db: SQLite.SQLiteDatabase, table: string, col: string) {
-	try {
-		const cols = await tableInfo(db, table);
-		return cols.some(c => c.name === col);
-	} catch {
-		return false;
+let db: SQLiteDatabase | null = null;
+let dbReady: Promise<SQLiteDatabase> | null = null;
+
+/** Initialise la DB (singleton) */
+async function initializeDb(): Promise<SQLiteDatabase> {
+	if (db) return db;
+	if (!dbReady) {
+		dbReady = (async () => {
+			const handle = await SQLite.openDatabaseAsync('apero.db');
+			db = handle;
+			return handle;
+		})();
 	}
-}
-
-// --- MIGRATION: assure que 'cities' a bien country_id & timezone_id
-async function migrateIfNeeded(db: SQLite.SQLiteDatabase) {
-	// Si la table n'existe pas encore, PRAGMA table_info renverra 0 ligne -> on ne fait rien
-	const cols = await tableInfo(db, 'cities');
-	const exists = cols.length > 0;
-
-	if (exists) {
-		const hasCountry = cols.some(c => c.name === 'country_id');
-		const hasTimezone = cols.some(c => c.name === 'timezone_id');
-
-		if (!hasCountry || !hasTimezone) {
-			// Schéma obsolète -> on recrée proprement
-			await db.withTransactionAsync(async () => {
-				await db.execAsync(`DROP TABLE IF EXISTS cities;`);
-				await db.execAsync(`
-          CREATE TABLE IF NOT EXISTS cities (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            name        TEXT NOT NULL,
-            country_id  INTEGER NOT NULL,
-            timezone_id INTEGER NOT NULL,
-            FOREIGN KEY(country_id)  REFERENCES countries(id),
-            FOREIGN KEY(timezone_id) REFERENCES timezones(id)
-          );
-        `);
-			});
-		}
-	}
+	return dbReady;
 }
 
-// --- SEED
-async function seedIfNeeded(db: SQLite.SQLiteDatabase) {
-	// Lire correctement user_version
-	const ver = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;');
-	const userVersion = ver?.user_version ?? 0;
+/** 🔥 RESET DB et reseed complet avec toutes les données */
+export const resetDatabase = async () => {
+	const handle = await initializeDb();
 
-	// FK ON
-	await db.execAsync('PRAGMA foreign_keys = ON;');
+	await handle.withTransactionAsync(async () => {
+		console.log('[DB] Reset en cours : DROP ALL TABLES...');
+		await handle.execAsync(`
+      DROP TABLE IF EXISTS translations;
+      DROP TABLE IF EXISTS specials;
+      DROP TABLE IF EXISTS types;
+      DROP TABLE IF EXISTS cities;
+      DROP TABLE IF EXISTS countries;
+      DROP TABLE IF EXISTS timezones;
+    `);
+		await handle.execAsync('PRAGMA user_version = 0;');
+	});
 
-	// Schéma (idempotent)
-	await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS timezones (
-      id   INTEGER PRIMARY KEY AUTOINCREMENT,
-      iana TEXT NOT NULL UNIQUE
-    );
-    CREATE TABLE IF NOT EXISTS countries (
-      id   INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    );
-    CREATE TABLE IF NOT EXISTS cities (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      name        TEXT NOT NULL,
-      country_id  INTEGER NOT NULL,
-      timezone_id INTEGER NOT NULL,
-      FOREIGN KEY(country_id)  REFERENCES countries(id),
-      FOREIGN KEY(timezone_id) REFERENCES timezones(id)
-    );
-    CREATE TABLE IF NOT EXISTS types (
-      id   INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    );
-    CREATE TABLE IF NOT EXISTS specials (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      type_id      INTEGER NOT NULL,
-      default_name TEXT NOT NULL,
-      country_id   INTEGER,
-      city_id      INTEGER,
-      FOREIGN KEY(type_id)    REFERENCES types(id),
-      FOREIGN KEY(country_id) REFERENCES countries(id),
-      FOREIGN KEY(city_id)    REFERENCES cities(id)
-    );
-    CREATE TABLE IF NOT EXISTS translations (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      entity_type     TEXT NOT NULL,
-      entity_id       INTEGER NOT NULL,
-      lang            TEXT NOT NULL,
-      translated_name TEXT NOT NULL,
-      translated_desc TEXT
-    );
-  `);
+	console.log('[DB] Base vidée. Re-seeding...');
 
-	// *** Migration avant d'insérer ***
-	await migrateIfNeeded(db);
+	await handle.withTransactionAsync(async () => {
+		// --- Création tables
+		await handle.execAsync(`
+      CREATE TABLE IF NOT EXISTS timezones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        iana TEXT NOT NULL UNIQUE
+      );
+      CREATE TABLE IF NOT EXISTS countries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      );
+      CREATE TABLE IF NOT EXISTS cities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        country_id INTEGER NOT NULL,
+        timezone_id INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS types (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      );
+      CREATE TABLE IF NOT EXISTS specials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type_id INTEGER NOT NULL,
+        default_name TEXT NOT NULL,
+        country_id INTEGER,
+        city_id INTEGER
+      );
+    `);
 
-	// 🔎 Vérifie si la table specials contient déjà des données
-	const specialsCount = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM specials;');
-	if (userVersion >= 1 && (specialsCount?.n ?? 0) > 0) {
-		console.log('[DB] Déjà seedé, rien à faire.');
-		return;
-	}
-
-	console.log('[DB] Seeding (nouvelle base ou specials manquants)...');
-
-	// Seed atomique & idempotent
-	await db.withTransactionAsync(async () => {
-		await db.execAsync(`
+		// --- Seed timezones
+		await handle.execAsync(`
       INSERT OR IGNORE INTO timezones (iana) VALUES
         ('Europe/Paris'), ('America/New_York'), ('America/Los_Angeles'),
         ('Europe/London'), ('Europe/Berlin'), ('Asia/Tokyo'),
@@ -124,13 +87,15 @@ async function seedIfNeeded(db: SQLite.SQLiteDatabase) {
         ('Africa/Johannesburg');
     `);
 
-		await db.execAsync(`
+		// --- Seed countries
+		await handle.execAsync(`
       INSERT OR IGNORE INTO countries (name) VALUES
         ('France'), ('United States'), ('United Kingdom'), ('Germany'),
         ('Japan'), ('India'), ('Australia'), ('Brazil'), ('South Africa'), ('Canada');
     `);
 
-		await db.execAsync(`
+		// --- Seed cities
+		await handle.execAsync(`
       INSERT OR IGNORE INTO cities (name, country_id, timezone_id) VALUES
         ('Paris',         (SELECT id FROM countries WHERE name='France'),         (SELECT id FROM timezones WHERE iana='Europe/Paris')),
         ('Lyon',          (SELECT id FROM countries WHERE name='France'),         (SELECT id FROM timezones WHERE iana='Europe/Paris')),
@@ -152,10 +117,11 @@ async function seedIfNeeded(db: SQLite.SQLiteDatabase) {
         ('Montreal',      (SELECT id FROM countries WHERE name='Canada'),         (SELECT id FROM timezones WHERE iana='America/New_York'));
     `);
 
-		await db.execAsync(`INSERT OR IGNORE INTO types (name) VALUES ('cocktail'), ('mocktail'), ('food');`);
+		// --- Seed types
+		await handle.execAsync(`INSERT OR IGNORE INTO types (name) VALUES ('cocktail'), ('mocktail'), ('food');`);
 
-		// 🔥 Réinsertion specials même si version déjà seedée
-		await db.execAsync(`
+		// --- Seed specials
+		await handle.execAsync(`
       INSERT OR IGNORE INTO specials (type_id, default_name, country_id, city_id) VALUES
       -- France
       ((SELECT id FROM types WHERE name='cocktail'), 'French 75', (SELECT id FROM countries WHERE name='France'), NULL),
@@ -198,64 +164,51 @@ async function seedIfNeeded(db: SQLite.SQLiteDatabase) {
       ((SELECT id FROM types WHERE name='mocktail'), 'Maple Lemonade', (SELECT id FROM countries WHERE name='Canada'), NULL),
       ((SELECT id FROM types WHERE name='food'), 'Poutine', (SELECT id FROM countries WHERE name='Canada'), NULL);
     `);
-
-		// 🚀 Mets à jour la version pour éviter de reseeder en boucle
-		await db.execAsync('PRAGMA user_version = 1;');
 	});
 
-	// Logs
-	const c1 = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM timezones;');
-	const c2 = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM cities;');
-	const c3 = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM specials;');
-	console.log('[DB] seed done. timezones:', c1?.n, 'cities:', c2?.n, 'specials:', c3?.n);
-}
-
-
-const initializeDatabase = async () => {
-	if (db) return db;
-	if (!dbReady) {
-		dbReady = (async () => {
-			const handle = await SQLite.openDatabaseAsync('apero.db');
-			db = handle;
-			await seedIfNeeded(handle);
-			return handle;
-		})();
-	}
-	return dbReady;
+	console.log('[DB] Re-seeding terminé ✅');
 };
 
-export const getCitiesWithTimezones = async (): Promise<CityWithTimezone[]> => {
-	const handle = await initializeDatabase();
-	const rows = await handle.getAllAsync<{ city: string; timezone: string }>(`
-        SELECT c.name AS city, t.iana AS timezone
-        FROM cities c
-                 JOIN timezones t ON c.timezone_id = t.id
-        ORDER BY c.name
-    `);
-	return rows.map(r => ({ name: r.city, timezone: r.timezone }));
-};
 
-// --- RESET DB (utile pour debug/dev)
-export const resetDatabase = async () => {
-	if (!db) {
-		console.warn('[DB] resetDatabase appelé avant init, ouverture forcée...');
-		db = await SQLite.openDatabaseAsync('apero.db');
-	}
+export const getCityData = async (): Promise<CityData[]> => {
+	const handle = await initializeDb();
 
-	await db.withTransactionAsync(async () => {
-		console.log('[DB] Reset en cours : DROP ALL TABLES...');
-		await db.execAsync(`
-      DROP TABLE IF EXISTS translations;
-      DROP TABLE IF EXISTS specials;
-      DROP TABLE IF EXISTS types;
-      DROP TABLE IF EXISTS cities;
-      DROP TABLE IF EXISTS countries;
-      DROP TABLE IF EXISTS timezones;
-    `);
-		await db.execAsync('PRAGMA user_version = 0;');
+	const rows = await handle.getAllAsync<{
+		city: string;
+		timezone: string;
+		type_name: string;
+		default_name: string;
+	}>(`
+    SELECT
+      c.name AS city,
+      t.iana AS timezone,
+      ty.name AS type_name,
+      s.default_name
+    FROM cities c
+      JOIN timezones t ON c.timezone_id = t.id
+      JOIN countries co ON c.country_id = co.id
+      LEFT JOIN specials s
+        ON (s.country_id = co.id OR s.city_id = c.id)
+      LEFT JOIN types ty ON s.type_id = ty.id
+    ORDER BY c.name, ty.id
+  `);
+
+	const cityMap: Record<string, CityData> = {};
+	rows.forEach(r => {
+		if (!cityMap[r.city]) {
+			cityMap[r.city] = { city: r.city, timezone: r.timezone, specials: [] };
+		}
+		if (r.type_name && r.default_name) {
+			cityMap[r.city].specials.push({
+				type: r.type_name as 'cocktail' | 'mocktail' | 'food',
+				name: r.default_name,
+			});
+		}
 	});
 
-	console.log('[DB] Base vidée. Reseed en cours...');
-	await seedIfNeeded(db);
-	console.log('[DB] Reset terminé ✅');
+	// DEBUG
+	const specialsDebug = await handle.getAllAsync<any>(`SELECT * FROM specials LIMIT 10;`);
+	console.log('[DEBUG specials]', specialsDebug);
+
+	return Object.values(cityMap);
 };

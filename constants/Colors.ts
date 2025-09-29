@@ -5,11 +5,10 @@
 
 
 export const COLORS = {
-	primary: "#B87333",       // Cuivre / Ambre foncé
-	secondary: "#6B4226",     // Brun chocolat
-	background: "#FAF5EF",    // Beige clair
-	cardBackground: "#F4EDE4",// Blanc chaud
-	text: "#1E1E1E",          // Noir doux
-	textSecondary: "#8C6A50", // Brun chaud
+  primary: "#B87333",       // Cuivre / Ambre foncé
+  secondary: "#6B4226",     // Brun chocolat
+  background: "#FAF5EF",    // Beige clair
+  cardBackground: "#F4EDE4",// Blanc chaud
+  text: "#1E1E1E",          // Noir doux
+  textSecondary: "#8C6A50", // Brun chaud
 };
-
