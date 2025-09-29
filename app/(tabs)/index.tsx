@@ -38,6 +38,7 @@ export default function HomeScreen() {
 
 	return (
 		<SafeAreaView style={styles.container}>
+			<Text style={styles.title}>🌍 ETA - Estimate Time of Apero </Text>
 			<Text style={styles.subHeaderText}>
 				Les villes où il est actuellement l'heure de l'apéro :
 			</Text>
@@ -63,6 +64,12 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		backgroundColor: COLORS.background,
 		padding: 16,
+	},
+	title: {
+		fontSize: 24,
+		fontWeight: 'bold',
+		marginBottom: 8,
+		color: COLORS.primary,
 	},
 	subHeaderText: {
 		fontSize: 16,
