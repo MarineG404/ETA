@@ -4,7 +4,7 @@ import { DrinkForm } from '@/components/alcohol/DrinkForm';
 import { DrinksList } from '@/components/alcohol/DrinksList';
 import { BACResults } from '@/components/alcohol/BACResults';
 import { Drink } from '@/types/alcohol';
-import { calculateBAC } from '@/utils/alcoholCalculator';
+import { calculateBAC, predictBAC } from '@/utils/alcoholCalculator';
 import { useTheme } from '@/context/ThemeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { getColors } from '@/constants/Colors';
@@ -17,9 +17,13 @@ export default function CalculatorScreen() {
 
 	const [drinks, setDrinks] = useState<Drink[]>([]);
 	const [result, setResult] = useState(calculateBAC([], profile));
+	const [predictions, setPredictions] = useState<{ time: Date; bac: number }[]>([]); // nouveau
 
 	useEffect(() => {
-		setResult(calculateBAC(drinks, profile));
+		const r = calculateBAC(drinks, profile);
+		setResult(r);
+		// prédictions sur 12h (15min step dans predictBAC)
+		setPredictions(predictBAC(drinks, profile, 12));
 	}, [drinks, profile]);
 
 	const addDrink = (drink: Omit<Drink, 'id'>) => {
@@ -57,7 +61,7 @@ export default function CalculatorScreen() {
 
 				<DrinkForm onAddDrink={addDrink} />
 				<DrinksList drinks={drinks} onRemoveDrink={removeDrink} />
-				{isProfileComplete && <BACResults result={result} />}
+				{isProfileComplete && <BACResults result={result} predictions={predictions} />}
 			</ScrollView>
 		</Header>
 	);
