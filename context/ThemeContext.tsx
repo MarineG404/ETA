@@ -1,54 +1,60 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useColorScheme } from "react-native";
-import { COLORS_LIGHT, COLORS_DARK } from "@/constants/Colors";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type ThemeMode = "light" | "dark" | "auto";
+type Theme = 'light' | 'dark' | 'auto';
 
-interface ThemeContextProps {
-	themeMode: ThemeMode;
-	COLORS: typeof COLORS_LIGHT;
-	setThemeMode: (mode: ThemeMode) => void;
-}
+type ThemeContextType = {
+	theme: Theme;
+	setTheme: (theme: Theme) => void;
+	isDark: boolean;
+};
 
-const ThemeContext = createContext<ThemeContextProps>({
-	themeMode: "auto",
-	COLORS: COLORS_LIGHT,
-	setThemeMode: () => { },
-});
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-	const systemScheme = useColorScheme(); // 'light' | 'dark'
-	const [themeMode, setThemeModeState] = useState<ThemeMode>("auto");
-	const [COLORS, setCOLORS] = useState(COLORS_LIGHT);
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+	const systemColorScheme = useColorScheme();
+	const [theme, setThemeState] = useState<Theme>('auto');
 
-	// Charger le choix de l'utilisateur au démarrage
+	// Charger le thème sauvegardé au démarrage
 	useEffect(() => {
 		const loadTheme = async () => {
-			const saved = await AsyncStorage.getItem("@themeMode");
-			if (saved === "light" || saved === "dark" || saved === "auto") {
-				setThemeModeState(saved);
+			try {
+				const savedTheme = await AsyncStorage.getItem('theme');
+				if (savedTheme) {
+					setThemeState(savedTheme as Theme);
+				}
+			} catch (error) {
+				console.error('Erreur chargement thème:', error);
 			}
 		};
 		loadTheme();
 	}, []);
 
-	// Mettre à jour la palette à chaque changement
-	useEffect(() => {
-		const mode = themeMode === "auto" ? systemScheme : themeMode;
-		setCOLORS(mode === "dark" ? COLORS_DARK : COLORS_LIGHT);
-	}, [themeMode, systemScheme]);
-
-	const setThemeMode = async (mode: ThemeMode) => {
-		setThemeModeState(mode);
-		await AsyncStorage.setItem("@themeMode", mode);
+	// Sauvegarder le thème quand il change
+	const setTheme = async (newTheme: Theme) => {
+		try {
+			await AsyncStorage.setItem('theme', newTheme);
+			setThemeState(newTheme);
+		} catch (error) {
+			console.error('Erreur sauvegarde thème:', error);
+		}
 	};
 
+	// Déterminer si le mode sombre est actif
+	const isDark = theme === 'auto' ? systemColorScheme === 'dark' : theme === 'dark';
+
 	return (
-		<ThemeContext.Provider value={{ themeMode, COLORS, setThemeMode }}>
+		<ThemeContext.Provider value={{ theme, setTheme, isDark }}>
 			{children}
 		</ThemeContext.Provider>
 	);
 };
 
-// Hook pratique
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = () => {
+	const context = useContext(ThemeContext);
+	if (!context) {
+		throw new Error('useTheme must be used within ThemeProvider');
+	}
+	return context;
+};
