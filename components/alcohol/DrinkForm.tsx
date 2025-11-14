@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { Drink } from '@/types/alcohol';
 import { useTheme } from '@/context/ThemeContext';
 import { getColors } from '@/constants/Colors';
@@ -21,18 +21,24 @@ export const DrinkForm: React.FC<DrinkFormProps> = ({ onAddDrink }) => {
 	const [showStartPicker, setShowStartPicker] = useState(false);
 	const [showEndPicker, setShowEndPicker] = useState(false);
 
-	// Boissons prédéfinies
+	// Boissons prédéfinies maintenant avec durée par défaut (minutes)
 	const presets = [
-		{ name: '🍺 Bière', volume: 250, alcohol: 5 },
-		{ name: '🍷 Vin', volume: 150, alcohol: 12 },
-		{ name: '🥃 Whisky', volume: 40, alcohol: 40 },
-		{ name: '🍹 Cocktail', volume: 200, alcohol: 15 },
+		{ name: '🍺 Bière', volume: 250, alcohol: 5, durationMin: 15 },
+		{ name: '🍻 Triple', volume: 500, alcohol: 9, durationMin: 30 },
+		{ name: '🍷 Vin', volume: 150, alcohol: 12, durationMin: 15 },
+		{ name: '🥃 Whisky', volume: 40, alcohol: 40, durationMin: 10 },
+		{ name: '🍹 Cocktail', volume: 200, alcohol: 15, durationMin: 20 },
 	];
 
 	const handlePreset = (preset: typeof presets[0]) => {
+		const now = new Date();
+		const start = new Date(now.getTime() - (preset.durationMin ?? 15) * 60 * 1000);
+
 		setName(preset.name);
 		setVolume(preset.volume.toString());
 		setAlcohol(preset.alcohol.toString());
+		setStartTime(start);
+		setEndTime(now);
 	};
 
 	const handleSubmit = () => {
@@ -66,18 +72,24 @@ export const DrinkForm: React.FC<DrinkFormProps> = ({ onAddDrink }) => {
 		<View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
 			<Text style={[styles.title, { color: colors.text }]}>🍺 Ajouter une boisson</Text>
 
-			{/* Presets */}
-			<View style={styles.presetsRow}>
+			{/* Presets en ligne (scroll horizontal) */}
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				contentContainerStyle={styles.presetsRow}
+			>
 				{presets.map((preset, idx) => (
 					<TouchableOpacity
 						key={idx}
 						style={[styles.presetButton, { backgroundColor: colors.background }]}
 						onPress={() => handlePreset(preset)}
 					>
-						<Text style={{ color: colors.text, fontSize: 12 }}>{preset.name}</Text>
+						<Text style={[styles.presetText, { color: colors.text }]} numberOfLines={2}>
+							{preset.name} · {preset.durationMin}min
+						</Text>
 					</TouchableOpacity>
 				))}
-			</View>
+			</ScrollView>
 
 			{/* Nom */}
 			<TextInput
@@ -174,18 +186,24 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		marginBottom: 12,
 	},
+	// presetsRow devient contentContainerStyle pour le ScrollView
 	presetsRow: {
 		flexDirection: 'row',
-		gap: 8,
-		marginBottom: 12,
-		flexWrap: 'wrap',
+		alignItems: 'center',
+		paddingBottom: 8,
 	},
 	presetButton: {
-		padding: 8,
-		borderRadius: 8,
-		flex: 1,
-		minWidth: 70,
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 12,
+		marginRight: 8,
+		minWidth: 90,
 		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	presetText: {
+		fontSize: 13,
+		textAlign: 'center',
 	},
 	input: {
 		padding: 12,
