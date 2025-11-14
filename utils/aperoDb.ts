@@ -9,6 +9,7 @@ export type SpecialItem = {
 
 export type CityData = {
 	city: string;
+	country?: string; // ✅ Ajouté pour inclure le pays renvoyé par la requête
 	timezone: string;
 	specials: SpecialItem[];
 };
@@ -422,12 +423,14 @@ export const getCityData = async (): Promise<CityData[]> => {
 
 	const rows = await handle.getAllAsync<{
 		city: string;
+		country: string;
 		timezone: string;
 		type_name: string;
 		default_name: string;
 	}>(`
     SELECT
       c.name AS city,
+      co.name AS country,           -- ✅ ajouté
       t.iana AS timezone,
       ty.name AS type_name,
       s.default_name
@@ -443,7 +446,7 @@ export const getCityData = async (): Promise<CityData[]> => {
 	const cityMap: Record<string, CityData> = {};
 	rows.forEach(r => {
 		if (!cityMap[r.city]) {
-			cityMap[r.city] = { city: r.city, timezone: r.timezone, specials: [] };
+			cityMap[r.city] = { city: r.city, country: r.country, timezone: r.timezone, specials: [] }; // ✅ include country
 		}
 		if (r.type_name && r.default_name) {
 			cityMap[r.city].specials.push({

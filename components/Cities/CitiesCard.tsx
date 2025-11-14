@@ -6,6 +6,7 @@ import { getColors } from '@/constants/Colors';
 
 type CityData = {
 	city: string;
+	country?: string;
 	timezone: string;
 	specials: { type: string; name: string }[];
 };
@@ -20,14 +21,15 @@ export const CitiesCard: React.FC<CitiesCardProps> = ({ city }) => {
 
 	const localTime = DateTime.now().setZone(city.timezone).toFormat('HH:mm');
 
-	const cocktail = city.specials.find((s) => s.type === 'cocktail')?.name || '🍹 Cocktail';
-	const mocktail = city.specials.find((s) => s.type === 'mocktail')?.name || '🥤 Mocktail';
-	const food = city.specials.find((s) => s.type === 'food')?.name || '🍴 Plat';
+	// Récupère les specials par type avec fallback
+	const cocktail = city.specials.find((s) => s.type === 'cocktail')?.name ?? 'N/A';
+	const mocktail = city.specials.find((s) => s.type === 'mocktail')?.name ?? 'N/A';
+	const food = city.specials.find((s) => s.type === 'food')?.name ?? 'N/A';
 
 	return (
 		<View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
 			<View style={styles.header}>
-				<Text style={[styles.cityName, { color: colors.primary }]}>{city.city}</Text>
+				<Text style={[styles.cityName, { color: colors.primary }]}>{city.city} - {city.country}</Text>
 				<Text style={[styles.time, { color: colors.secondary }]}>{localTime}</Text>
 			</View>
 

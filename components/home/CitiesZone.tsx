@@ -4,6 +4,7 @@ import { CitiesCard } from '@/components/Cities/CitiesCard';
 
 type CityData = {
 	city: string;
+	country?: string;
 	timezone: string;
 	specials: { type: string; name: string }[];
 };
