@@ -9,6 +9,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { getColors } from '@/constants/Colors';
 import { Header } from '@/components/ui/header';
+import * as Notifications from 'expo-notifications';
+import { getBACStatus } from '@/utils/alcoholCalculator';
+import { PhaseNotifier } from '@/components/notifications/PhaseNotifier'; // nouveau
 
 export default function CalculatorScreen() {
 	const { isDark } = useTheme();
@@ -58,6 +61,8 @@ export default function CalculatorScreen() {
 						</Text>
 					</View>
 				)}
+
+				{isProfileComplete && <PhaseNotifier predictions={predictions} />}
 
 				<DrinkForm onAddDrink={addDrink} />
 				<DrinksList drinks={drinks} onRemoveDrink={removeDrink} />
