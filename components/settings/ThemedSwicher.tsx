@@ -17,7 +17,7 @@ export const ThemedSwitcher = () => {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-			<Text style={[styles.title, { color: colors.text }]}>🎨 Thème de l'application</Text>
+			<Text style={[styles.title, { color: colors.text }]}>Thème de l'application</Text>
 			<View style={styles.optionsContainer}>
 				{options.map((o) => (
 					<TouchableOpacity
@@ -53,8 +53,7 @@ export const ThemedSwitcher = () => {
 const styles = StyleSheet.create({
 	container: {
 		padding: 20,
-		borderRadius: 12,
-		margin: 16,
+		borderRadius: 20,
 	},
 	title: {
 		fontSize: 18,
@@ -78,7 +77,6 @@ const styles = StyleSheet.create({
 		height: 20,
 		borderRadius: 10,
 		borderWidth: 2,
-		borderColor: '#9ca3af',
 		marginRight: 12,
 	},
 	label: {

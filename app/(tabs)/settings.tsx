@@ -3,49 +3,45 @@ import { ThemedSwitcher } from '@/components/settings/ThemedSwicher';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { getColors } from '@/constants/Colors';
+import { Header } from '@/components/ui/header';
 
 export default function SettingsScreen() {
 	const { isDark } = useTheme();
-	const colors = getColors(isDark); 
+	const colors = getColors(isDark);
 
 	return (
-		<ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-			<View style={styles.header}>
-				<Text style={[styles.headerTitle, { color: colors.text }]}>Paramètres</Text>
-				<Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-					Personnalise ton expérience ETA
-				</Text>
-			</View>
+		<Header
+			emoji="⚙️"
+			title="Paramètres"
+			subtitle="Personnalise ton expérience ETA"
+		>
+			<ScrollView
+				style={styles.content}
+				contentContainerStyle={styles.scrollContent}
+				showsVerticalScrollIndicator={false}
+			>
+				<ThemedSwitcher />
 
-			<ThemedSwitcher />
-
-			<View style={styles.footer}>
-				<Text style={[styles.footerText, { color: colors.textSecondary }]}>
-					🍻 ETA - Estimate Time of Apero
-				</Text>
-				<Text style={[styles.footerText, { color: colors.textSecondary }]}>
-					Version 1.0.0
-				</Text>
-			</View>
-		</ScrollView>
+				<View style={styles.footer}>
+					<Text style={[styles.footerText, { color: colors.textSecondary }]}>
+						🍻 ETA - Estimate Time of Apero
+					</Text>
+					<Text style={[styles.footerText, { color: colors.textSecondary }]}>
+						Version 1.0.0
+					</Text>
+				</View>
+			</ScrollView>
+		</Header>
 	);
 }
 
 const styles = StyleSheet.create({
-	container: {
+	content: {
 		flex: 1,
+		width: '100%',
 	},
-	header: {
-		padding: 20,
-		paddingTop: 60,
-	},
-	headerTitle: {
-		fontSize: 32,
-		fontWeight: 'bold',
-		marginBottom: 8,
-	},
-	headerSubtitle: {
-		fontSize: 16,
+	scrollContent: {
+		paddingBottom: 40,
 	},
 	footer: {
 		alignItems: 'center',

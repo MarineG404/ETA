@@ -42,7 +42,7 @@ export const CitiesCard: React.FC<CitiesCardProps> = ({ city }) => {
 
 const styles = StyleSheet.create({
 	card: {
-		borderRadius: 12,
+		borderRadius: 20,
 		padding: 16,
 		marginBottom: 12,
 		shadowColor: '#000',
