@@ -27,8 +27,8 @@ export const CitiesCard: React.FC<CitiesCardProps> = ({ city }) => {
 	return (
 		<View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
 			<View style={styles.header}>
-				<Text style={[styles.cityName, { color: colors.text }]}>{city.city}</Text>
-				<Text style={[styles.time, { color: colors.primary }]}>{localTime}</Text>
+				<Text style={[styles.cityName, { color: colors.primary }]}>{city.city}</Text>
+				<Text style={[styles.time, { color: colors.secondary }]}>{localTime}</Text>
 			</View>
 
 			<View style={styles.specialsContainer}>
