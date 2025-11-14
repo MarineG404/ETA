@@ -1,112 +1,161 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Drink } from '@/types/alcohol';
-import { getColors } from '@/constants/Colors';
 import { useTheme } from '@/context/ThemeContext';
+import { getColors } from '@/constants/Colors';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-interface DrinkFormProps {
-	onAddDrink: (drink: Drink) => void;
-}
+type DrinkFormProps = {
+	onAddDrink: (drink: Omit<Drink, 'id'>) => void;
+};
 
 export const DrinkForm: React.FC<DrinkFormProps> = ({ onAddDrink }) => {
 	const { isDark } = useTheme();
-	const COLORS = getColors(isDark);
+	const colors = getColors(isDark);
 
-	const [newDrink, setNewDrink] = useState({
-		name: '',
-		volume: '',
-		alcohol: '',
-	});
+	const [name, setName] = useState('');
+	const [volume, setVolume] = useState('');
+	const [alcohol, setAlcohol] = useState('');
+	const [startTime, setStartTime] = useState(new Date());
+	const [endTime, setEndTime] = useState(new Date());
+	const [showStartPicker, setShowStartPicker] = useState(false);
+	const [showEndPicker, setShowEndPicker] = useState(false);
 
+	// Boissons prédéfinies
 	const presets = [
-		{ name: 'Bière 🍺', volume: 33, alcohol: 5 },
-		{ name: 'Vin 🍷', volume: 15, alcohol: 12 },
-		{ name: 'Pastis 🥃', volume: 4, alcohol: 45 },
-		{ name: 'Whisky 🥃', volume: 4, alcohol: 40 },
+		{ name: '🍺 Bière', volume: 250, alcohol: 5 },
+		{ name: '🍷 Vin', volume: 150, alcohol: 12 },
+		{ name: '🥃 Whisky', volume: 40, alcohol: 40 },
+		{ name: '🍹 Cocktail', volume: 200, alcohol: 15 },
 	];
 
-	const addDrink = () => {
-		if (!newDrink.name || !newDrink.volume || !newDrink.alcohol) return;
-
-		const drink: Drink = {
-			id: Date.now().toString(),
-			name: newDrink.name,
-			volume: parseFloat(newDrink.volume),
-			alcohol: parseFloat(newDrink.alcohol),
-			time: new Date(),
-		};
-
-		onAddDrink(drink);
-		setNewDrink({ name: '', volume: '', alcohol: '' });
+	const handlePreset = (preset: typeof presets[0]) => {
+		setName(preset.name);
+		setVolume(preset.volume.toString());
+		setAlcohol(preset.alcohol.toString());
 	};
 
-	const addPreset = (preset: typeof presets[0]) => {
-		const drink: Drink = {
-			id: Date.now().toString(),
-			name: preset.name,
-			volume: preset.volume,
-			alcohol: preset.alcohol,
-			time: new Date(),
-		};
-		onAddDrink(drink);
+	const handleSubmit = () => {
+		if (!name || !volume || !alcohol) {
+			alert('Remplis tous les champs !');
+			return;
+		}
+
+		if (endTime <= startTime) {
+			alert('L\'heure de fin doit être après l\'heure de début !');
+			return;
+		}
+
+		onAddDrink({
+			name,
+			volume: parseFloat(volume),
+			alcohol: parseFloat(alcohol),
+			startTime,
+			endTime,
+		});
+
+		// Reset
+		setName('');
+		setVolume('');
+		setAlcohol('');
+		setStartTime(new Date());
+		setEndTime(new Date());
 	};
 
 	return (
-		<View style={[styles.section, { backgroundColor: COLORS.cardBackground }]}>
-			<Text style={[styles.sectionTitle, { color: COLORS.text }]}>🍹 Ajouter une boisson</Text>
+		<View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+			<Text style={[styles.title, { color: colors.text }]}>🍺 Ajouter une boisson</Text>
 
-			{/* Presets rapides */}
-			<View style={styles.presets}>
-				{presets.map((preset, index) => (
+			{/* Presets */}
+			<View style={styles.presetsRow}>
+				{presets.map((preset, idx) => (
 					<TouchableOpacity
-						key={index}
-						style={[styles.presetButton, { backgroundColor: COLORS.background }]}
-						onPress={() => addPreset(preset)}
+						key={idx}
+						style={[styles.presetButton, { backgroundColor: colors.background }]}
+						onPress={() => handlePreset(preset)}
 					>
-						<Text style={[styles.presetText, { color: COLORS.text }]}>{preset.name}</Text>
+						<Text style={{ color: colors.text, fontSize: 12 }}>{preset.name}</Text>
 					</TouchableOpacity>
 				))}
 			</View>
 
-			<Text style={[styles.orText, { color: COLORS.textSecondary }]}>ou personnalisé :</Text>
-
+			{/* Nom */}
 			<TextInput
-				style={[styles.input, { backgroundColor: COLORS.background, color: COLORS.text, borderColor: COLORS.textSecondary + '40' }]}
-				value={newDrink.name}
-				onChangeText={(text) => setNewDrink({ ...newDrink, name: text })}
-				placeholder="Ex: Bière, Vin, Cocktail..."
-				placeholderTextColor={COLORS.textSecondary}
+				style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
+				placeholder="Nom de la boisson"
+				placeholderTextColor={colors.textSecondary}
+				value={name}
+				onChangeText={setName}
 			/>
 
-			<View style={styles.inputRow}>
-				<View style={styles.inputGroup}>
-					<Text style={[styles.label, { color: COLORS.textSecondary }]}>Volume (cl)</Text>
-					<TextInput
-						style={[styles.input, { backgroundColor: COLORS.background, color: COLORS.text, borderColor: COLORS.textSecondary + '40' }]}
-						keyboardType="numeric"
-						value={newDrink.volume}
-						onChangeText={(text) => setNewDrink({ ...newDrink, volume: text })}
-						placeholder="33"
-						placeholderTextColor={COLORS.textSecondary}
-					/>
-				</View>
-
-				<View style={styles.inputGroup}>
-					<Text style={[styles.label, { color: COLORS.textSecondary }]}>Alcool (%)</Text>
-					<TextInput
-						style={[styles.input, { backgroundColor: COLORS.background, color: COLORS.text, borderColor: COLORS.textSecondary + '40' }]}
-						keyboardType="numeric"
-						value={newDrink.alcohol}
-						onChangeText={(text) => setNewDrink({ ...newDrink, alcohol: text })}
-						placeholder="5"
-						placeholderTextColor={COLORS.textSecondary}
-					/>
-				</View>
+			{/* Volume et Alcool */}
+			<View style={styles.row}>
+				<TextInput
+					style={[styles.input, styles.halfInput, { backgroundColor: colors.background, color: colors.text }]}
+					placeholder="Volume (mL)"
+					placeholderTextColor={colors.textSecondary}
+					keyboardType="numeric"
+					value={volume}
+					onChangeText={setVolume}
+				/>
+				<TextInput
+					style={[styles.input, styles.halfInput, { backgroundColor: colors.background, color: colors.text }]}
+					placeholder="Alcool (%)"
+					placeholderTextColor={colors.textSecondary}
+					keyboardType="numeric"
+					value={alcohol}
+					onChangeText={setAlcohol}
+				/>
 			</View>
 
+			{/* Heure de début */}
 			<TouchableOpacity
-				style={[styles.addButton, { backgroundColor: COLORS.primary }]}
-				onPress={addDrink}
+				style={[styles.timeButton, { backgroundColor: colors.background }]}
+				onPress={() => setShowStartPicker(true)}
+			>
+				<Text style={{ color: colors.text }}>
+					⏰ Début : {startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+				</Text>
+			</TouchableOpacity>
+
+			{showStartPicker && (
+				<DateTimePicker
+					value={startTime}
+					mode="time"
+					display="default"
+					onChange={(event, date) => {
+						setShowStartPicker(Platform.OS === 'ios');
+						if (date) setStartTime(date);
+					}}
+				/>
+			)}
+
+			{/* Heure de fin */}
+			<TouchableOpacity
+				style={[styles.timeButton, { backgroundColor: colors.background }]}
+				onPress={() => setShowEndPicker(true)}
+			>
+				<Text style={{ color: colors.text }}>
+					⏰ Fin : {endTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+				</Text>
+			</TouchableOpacity>
+
+			{showEndPicker && (
+				<DateTimePicker
+					value={endTime}
+					mode="time"
+					display="default"
+					onChange={(event, date) => {
+						setShowEndPicker(Platform.OS === 'ios');
+						if (date) setEndTime(date);
+					}}
+				/>
+			)}
+
+			{/* Bouton ajouter */}
+			<TouchableOpacity
+				style={[styles.addButton, { backgroundColor: colors.primary }]}
+				onPress={handleSubmit}
 			>
 				<Text style={styles.addButtonText}>➕ Ajouter</Text>
 			</TouchableOpacity>
@@ -115,63 +164,57 @@ export const DrinkForm: React.FC<DrinkFormProps> = ({ onAddDrink }) => {
 };
 
 const styles = StyleSheet.create({
-	section: {
-		borderRadius: 16,
+	container: {
 		padding: 16,
+		borderRadius: 12,
 		marginBottom: 16,
 	},
-	sectionTitle: {
+	title: {
 		fontSize: 18,
-		fontWeight: '600',
+		fontWeight: 'bold',
 		marginBottom: 12,
 	},
-	presets: {
+	presetsRow: {
 		flexDirection: 'row',
-		flexWrap: 'wrap',
 		gap: 8,
 		marginBottom: 12,
+		flexWrap: 'wrap',
 	},
 	presetButton: {
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-		borderRadius: 20,
-	},
-	presetText: {
-		fontSize: 14,
-		fontWeight: '500',
-	},
-	orText: {
-		textAlign: 'center',
-		fontSize: 14,
-		marginBottom: 12,
-	},
-	inputRow: {
-		flexDirection: 'row',
-		gap: 12,
-	},
-	inputGroup: {
+		padding: 8,
+		borderRadius: 8,
 		flex: 1,
-	},
-	label: {
-		fontSize: 14,
-		marginBottom: 6,
-		fontWeight: '500',
-	},
-	input: {
-		borderRadius: 12,
-		padding: 12,
-		fontSize: 16,
-		borderWidth: 1,
-		marginBottom: 12,
-	},
-	addButton: {
-		borderRadius: 12,
-		padding: 14,
+		minWidth: 70,
 		alignItems: 'center',
 	},
-	addButtonText: {
-		color: '#FFF',
+	input: {
+		padding: 12,
+		borderRadius: 8,
+		marginBottom: 8,
 		fontSize: 16,
-		fontWeight: '600',
+	},
+	row: {
+		flexDirection: 'row',
+		gap: 8,
+	},
+	halfInput: {
+		flex: 1,
+	},
+	timeButton: {
+		padding: 12,
+		borderRadius: 8,
+		marginBottom: 8,
+		alignItems: 'center',
+	},
+	addButton: {
+		padding: 14,
+		borderRadius: 8,
+		alignItems: 'center',
+		marginTop: 8,
+	},
+	addButtonText: {
+		color: '#fff',
+		fontSize: 16,
+		fontWeight: 'bold',
 	},
 });

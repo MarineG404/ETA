@@ -1,118 +1,104 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { UserProfile } from '@/types/alcohol';
-import { getColors } from '@/constants/Colors';
 import { useTheme } from '@/context/ThemeContext';
+import { getColors } from '@/constants/Colors';
 
-interface ProfileFormProps {
+type ProfileFormProps = {
 	profile: UserProfile;
 	onProfileChange: (profile: UserProfile) => void;
-}
+};
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onProfileChange }) => {
 	const { isDark } = useTheme();
-	const COLORS = getColors(isDark);
+	const colors = getColors(isDark);
 
 	return (
-		<View style={[styles.section, { backgroundColor: COLORS.cardBackground }]}>
-			<Text style={[styles.sectionTitle, { color: COLORS.text }]}>👤 Ton profil</Text>
+		<View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+			<Text style={[styles.title, { color: colors.text }]}>👤 Mon profil</Text>
 
-			<View style={styles.genderButtons}>
+			{/* Genre */}
+			<View style={styles.row}>
 				<TouchableOpacity
 					style={[
 						styles.genderButton,
-						{ backgroundColor: COLORS.background, borderColor: COLORS.cardBackground },
-						profile.gender === 'male' && { backgroundColor: COLORS.primary + '20', borderColor: COLORS.primary }
+						{ backgroundColor: profile.gender === 'male' ? colors.primary : colors.background }
 					]}
 					onPress={() => onProfileChange({ ...profile, gender: 'male' })}
 				>
-					<Text style={[styles.genderButtonText, { color: COLORS.text }]}>👨 Homme</Text>
+					<Text style={[styles.genderText, { color: profile.gender === 'male' ? '#fff' : colors.text }]}>
+						👨 Homme
+					</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity
 					style={[
 						styles.genderButton,
-						{ backgroundColor: COLORS.background, borderColor: COLORS.cardBackground },
-						profile.gender === 'female' && { backgroundColor: COLORS.primary + '20', borderColor: COLORS.primary }
+						{ backgroundColor: profile.gender === 'female' ? colors.primary : colors.background }
 					]}
 					onPress={() => onProfileChange({ ...profile, gender: 'female' })}
 				>
-					<Text style={[styles.genderButtonText, { color: COLORS.text }]}>👩 Femme</Text>
+					<Text style={[styles.genderText, { color: profile.gender === 'female' ? '#fff' : colors.text }]}>
+						👩 Femme
+					</Text>
 				</TouchableOpacity>
 			</View>
 
-			<View style={styles.inputRow}>
-				<View style={styles.inputGroup}>
-					<Text style={[styles.label, { color: COLORS.textSecondary }]}>Poids (kg)</Text>
-					<TextInput
-						style={[styles.input, { backgroundColor: COLORS.background, color: COLORS.text, borderColor: COLORS.textSecondary + '40' }]}
-						keyboardType="numeric"
-						value={profile.weight ? profile.weight.toString() : ''}
-						onChangeText={(text) => onProfileChange({ ...profile, weight: parseFloat(text) || 0 })}
-						placeholder="70"
-						placeholderTextColor={COLORS.textSecondary}
-					/>
-				</View>
-
-				<View style={styles.inputGroup}>
-					<Text style={[styles.label, { color: COLORS.textSecondary }]}>Taille (cm)</Text>
-					<TextInput
-						style={[styles.input, { backgroundColor: COLORS.background, color: COLORS.text, borderColor: COLORS.textSecondary + '40' }]}
-						keyboardType="numeric"
-						value={profile.height ? profile.height.toString() : ''}
-						onChangeText={(text) => onProfileChange({ ...profile, height: parseFloat(text) || 0 })}
-						placeholder="175"
-						placeholderTextColor={COLORS.textSecondary}
-					/>
-				</View>
+			{/* Poids et Taille */}
+			<View style={styles.row}>
+				<TextInput
+					style={[styles.input, styles.halfInput, { backgroundColor: colors.background, color: colors.text }]}
+					placeholder="Poids (kg)"
+					placeholderTextColor={colors.textSecondary}
+					keyboardType="numeric"
+					value={profile.weight?.toString() || ''}
+					onChangeText={(text) => onProfileChange({ ...profile, weight: parseFloat(text) || null })}
+				/>
+				<TextInput
+					style={[styles.input, styles.halfInput, { backgroundColor: colors.background, color: colors.text }]}
+					placeholder="Taille (cm)"
+					placeholderTextColor={colors.textSecondary}
+					keyboardType="numeric"
+					value={profile.height?.toString() || ''}
+					onChangeText={(text) => onProfileChange({ ...profile, height: parseFloat(text) || null })}
+				/>
 			</View>
 		</View>
 	);
 };
 
 const styles = StyleSheet.create({
-	section: {
-		borderRadius: 16,
+	container: {
 		padding: 16,
+		borderRadius: 12,
 		marginBottom: 16,
 	},
-	sectionTitle: {
+	title: {
 		fontSize: 18,
-		fontWeight: '600',
+		fontWeight: 'bold',
 		marginBottom: 12,
 	},
-	genderButtons: {
+	row: {
 		flexDirection: 'row',
-		gap: 12,
+		gap: 8,
 		marginBottom: 12,
 	},
 	genderButton: {
 		flex: 1,
 		padding: 12,
-		borderRadius: 12,
+		borderRadius: 8,
 		alignItems: 'center',
-		borderWidth: 2,
 	},
-	genderButtonText: {
+	genderText: {
 		fontSize: 16,
 		fontWeight: '600',
 	},
-	inputRow: {
-		flexDirection: 'row',
-		gap: 12,
-	},
-	inputGroup: {
-		flex: 1,
-	},
-	label: {
-		fontSize: 14,
-		marginBottom: 6,
-		fontWeight: '500',
-	},
 	input: {
-		borderRadius: 12,
 		padding: 12,
+		borderRadius: 8,
 		fontSize: 16,
-		borderWidth: 1,
+	},
+	halfInput: {
+		flex: 1,
 	},
 });

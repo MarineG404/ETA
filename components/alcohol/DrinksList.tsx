@@ -1,33 +1,41 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Drink } from '@/types/alcohol';
-import { getColors } from '@/constants/Colors';
 import { useTheme } from '@/context/ThemeContext';
+import { getColors } from '@/constants/Colors';
 
-interface DrinksListProps {
+type DrinksListProps = {
 	drinks: Drink[];
 	onRemoveDrink: (id: string) => void;
-}
+};
 
 export const DrinksList: React.FC<DrinksListProps> = ({ drinks, onRemoveDrink }) => {
 	const { isDark } = useTheme();
 	const COLORS = getColors(isDark);
 
-	if (drinks.length === 0) return null;
+	if (drinks.length === 0) {
+		return (
+			<View style={[styles.emptyContainer, { backgroundColor: COLORS.cardBackground }]}>
+				<Text style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>
+					Aucune boisson ajoutée
+				</Text>
+			</View>
+		);
+	}
 
 	return (
-		<View style={[styles.section, { backgroundColor: COLORS.cardBackground }]}>
-			<Text style={[styles.sectionTitle, { color: COLORS.text }]}>📋 Consommations</Text>
-			{drinks.map(drink => (
+		<View style={[styles.container, { backgroundColor: COLORS.cardBackground }]}>
+			<Text style={[styles.title, { color: COLORS.text }]}>📋 Mes boissons ({drinks.length})</Text>
+			{drinks.map((drink) => (
 				<View key={drink.id} style={[styles.drinkItem, { backgroundColor: COLORS.background }]}>
 					<View style={styles.drinkInfo}>
 						<Text style={[styles.drinkName, { color: COLORS.text }]}>{drink.name}</Text>
 						<Text style={[styles.drinkDetails, { color: COLORS.textSecondary }]}>
-							{drink.volume}cl • {drink.alcohol}% • {drink.time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+							{drink.volume}ml • {drink.alcohol}% • {drink.startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} → {drink.endTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
 						</Text>
 					</View>
 					<TouchableOpacity onPress={() => onRemoveDrink(drink.id)}>
-						<Text style={styles.removeButton}>✕</Text>
+						<Text style={[styles.deleteButton, { color: COLORS.primary }]}>🗑️</Text>
 					</TouchableOpacity>
 				</View>
 			))}
@@ -36,22 +44,28 @@ export const DrinksList: React.FC<DrinksListProps> = ({ drinks, onRemoveDrink })
 };
 
 const styles = StyleSheet.create({
-	section: {
-		borderRadius: 16,
+	container: {
 		padding: 16,
+		borderRadius: 12,
 		marginBottom: 16,
 	},
-	sectionTitle: {
+	emptyContainer: {
+		padding: 16,
+		borderRadius: 12,
+		alignItems: 'center',
+		marginBottom: 16,
+	},
+	title: {
 		fontSize: 18,
-		fontWeight: '600',
+		fontWeight: 'bold',
 		marginBottom: 12,
 	},
 	drinkItem: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'center',
-		borderRadius: 12,
 		padding: 12,
+		borderRadius: 8,
 		marginBottom: 8,
 	},
 	drinkInfo: {
@@ -63,11 +77,10 @@ const styles = StyleSheet.create({
 		marginBottom: 4,
 	},
 	drinkDetails: {
-		fontSize: 13,
+		fontSize: 14,
 	},
-	removeButton: {
+	deleteButton: {
 		fontSize: 24,
-		color: '#F44336',
-		padding: 4,
+		marginLeft: 12,
 	},
 });

@@ -1,13 +1,28 @@
-export interface Drink {
-  id: string;
-  name: string;
-  volume: number; // cl
-  alcohol: number; // %
-  time: Date;
-}
+export type Gender = 'male' | 'female';
 
-export interface UserProfile {
-  weight: number;
-  height: number;
-  gender: 'male' | 'female' | null;
-}
+export type UserProfile = {
+	gender: Gender | null;
+	weight: number | null; // en kg
+	height: number | null; // en cm (optionnel mais utile pour calcul IMC)
+	age?: number;
+};
+
+export type Drink = {
+	id: string;
+	name: string;
+	volume: number; // en mL
+	alcohol: number; // % d'alcool
+	startTime: Date; // ✅ Heure de début
+	endTime: Date; // ✅ Heure de fin
+};
+
+export type BACResult = {
+	currentBAC: number; // Taux actuel en g/L
+	peakBAC: number; // Taux maximal atteint
+	peakTime: Date; // Heure du pic
+	soberTime: Date | null; // Heure de sobriété
+	status: {
+		text: string;
+		color: string;
+	};
+};
