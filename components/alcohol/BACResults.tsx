@@ -76,22 +76,37 @@ export const BACResults: React.FC<BACResultsProps> = ({ result, predictions = []
 			{/* Phases prévues (regroupées) */}
 			{segments.length > 0 && (
 				<View style={[styles.infoBlock, { borderColor: colors.textSecondary + '30' }]}>
-					<Text style={[styles.infoLabel, { color: colors.textSecondary }]}>🕒 Phases prévues</Text>
-					{segments.map((seg, idx) => (
-						<View key={idx} style={styles.phaseRow}>
-							<View style={styles.phaseDot}>
-								<Text style={{ color: seg.status.color }}>{'●'}</Text>
+					<Text
+						style={[styles.infoLabel, { color: colors.textSecondary }]}
+						numberOfLines={1}
+						ellipsizeMode="tail"
+					>
+						🕒 Phases prévues
+					</Text>
+
+					{segments.map((seg, idx) => {
+						const isSobre = seg.status.text.toLowerCase().startsWith('sobre');
+						// si on a result.soberTime, utilise-la pour la phase "Sobre" (plus précise)
+						const displayTime = isSobre && result.soberTime ? result.soberTime : seg.start;
+
+						return (
+							<View key={idx} style={styles.phaseRow}>
+								<View style={styles.phaseDot}>
+									<Text style={{ color: seg.status.color }}>{'●'}</Text>
+								</View>
+
+								{isSobre ? (
+									<Text style={[styles.phaseText, { color: colors.text }]}>
+										{seg.status.text} — {displayTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+									</Text>
+								) : (
+									<Text style={[styles.phaseText, { color: colors.text }]}>
+										{seg.status.text} — {seg.start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} → {seg.end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+									</Text>
+								)}
 							</View>
-							<Text
-								style={[styles.phaseText, { color: colors.text }]}
-								numberOfLines={1}
-								ellipsizeMode="tail"
-							>
-								{seg.status.text} — {seg.start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-								{seg.start.getTime() !== seg.end.getTime() ? ` → ${seg.end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}
-							</Text>
-						</View>
-					))}
+						);
+					})}
 				</View>
 			)}
 
@@ -149,12 +164,13 @@ const styles = StyleSheet.create({
 		borderBottomColor: '#e0e0e0',
 	},
 	infoLabel: {
-		width: 120,
+		flexShrink: 0,
 		fontSize: 14,
 	},
 	infoValueContainer: {
 		flex: 1,
 		minWidth: 0,
+		marginLeft: 8,
 	},
 	infoValue: {
 		flexWrap: 'wrap',
