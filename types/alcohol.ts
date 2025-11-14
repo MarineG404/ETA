@@ -3,8 +3,8 @@ export type Gender = 'male' | 'female';
 export type UserProfile = {
 	gender: Gender | null;
 	weight: number | null; // en kg
-	height: number | null; // en cm (optionnel mais utile pour calcul IMC)
-	age?: number;
+	height: number | null; // en cm
+	age: number | null; // en années ✅ Ajouté
 };
 
 export type Drink = {

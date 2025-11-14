@@ -17,6 +17,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onProfileChan
 		<View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
 			<Text style={[styles.title, { color: colors.text }]}>👤 Mon profil</Text>
 
+			{/* Genre */}
 			<View style={styles.row}>
 				<TouchableOpacity
 					style={[
@@ -43,6 +44,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onProfileChan
 				</TouchableOpacity>
 			</View>
 
+			{/* Poids et Taille */}
 			<View style={styles.row}>
 				<TextInput
 					style={[styles.input, styles.halfInput, { backgroundColor: colors.background, color: colors.text }]}
@@ -62,8 +64,18 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onProfileChan
 				/>
 			</View>
 
+			{/* Âge */}
+			<TextInput
+				style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
+				placeholder="Âge (années)"
+				placeholderTextColor={colors.textSecondary}
+				keyboardType="numeric"
+				value={profile.age?.toString() || ''}
+				onChangeText={(text) => onProfileChange({ ...profile, age: parseFloat(text) || null })}
+			/>
+
 			<Text style={[styles.hint, { color: colors.textSecondary }]}>
-				ℹ️ Ces données sont utilisées pour le calculateur d'alcoolémie
+				ℹ️ Ces données sont utilisées pour le calculateur d'alcoolémie (formule Watson)
 			</Text>
 		</View>
 	);
@@ -99,9 +111,11 @@ const styles = StyleSheet.create({
 		padding: 12,
 		borderRadius: 8,
 		fontSize: 16,
+		marginBottom: 12,
 	},
 	halfInput: {
 		flex: 1,
+		marginBottom: 0,
 	},
 	hint: {
 		fontSize: 12,

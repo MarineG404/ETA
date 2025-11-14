@@ -14,6 +14,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
 		gender: null,
 		weight: null,
 		height: null,
+		age: null,
 	});
 
 	// Charger le profil sauvegardé au démarrage
