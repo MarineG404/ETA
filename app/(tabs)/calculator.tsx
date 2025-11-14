@@ -1,29 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
-import { ProfileForm } from '@/components/alcohol/ProfileForm';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DrinkForm } from '@/components/alcohol/DrinkForm';
 import { DrinksList } from '@/components/alcohol/DrinksList';
 import { BACResults } from '@/components/alcohol/BACResults';
-import { UserProfile, Drink } from '@/types/alcohol';
+import { Drink } from '@/types/alcohol';
 import { calculateBAC } from '@/utils/alcoholCalculator';
 import { useTheme } from '@/context/ThemeContext';
+import { useProfile } from '@/context/ProfileContext';
 import { getColors } from '@/constants/Colors';
 import { Header } from '@/components/ui/header';
 
 export default function CalculatorScreen() {
 	const { isDark } = useTheme();
 	const colors = getColors(isDark);
-
-	const [profile, setProfile] = useState<UserProfile>({
-		gender: null,
-		weight: null,
-		height: null,
-	});
+	const { profile } = useProfile();
 
 	const [drinks, setDrinks] = useState<Drink[]>([]);
 	const [result, setResult] = useState(calculateBAC([], profile));
 
-	// Recalcul à chaque changement
 	useEffect(() => {
 		setResult(calculateBAC(drinks, profile));
 	}, [drinks, profile]);
@@ -40,6 +34,8 @@ export default function CalculatorScreen() {
 		setDrinks(drinks.filter((d) => d.id !== id));
 	};
 
+	const isProfileComplete = profile.gender && profile.weight;
+
 	return (
 		<Header
 			emoji="🍺"
@@ -51,10 +47,17 @@ export default function CalculatorScreen() {
 				contentContainerStyle={styles.scrollContent}
 				showsVerticalScrollIndicator={false}
 			>
-				<ProfileForm profile={profile} onProfileChange={setProfile} />
+				{!isProfileComplete && (
+					<View style={[styles.warning, { backgroundColor: colors.primary + '20' }]}>
+						<Text style={[styles.warningText, { color: colors.primary }]}>
+							⚠️ Configure ton profil dans les paramètres pour des calculs précis !
+						</Text>
+					</View>
+				)}
+
 				<DrinkForm onAddDrink={addDrink} />
 				<DrinksList drinks={drinks} onRemoveDrink={removeDrink} />
-				<BACResults result={result} />
+				{isProfileComplete && <BACResults result={result} />}
 			</ScrollView>
 		</Header>
 	);
@@ -67,5 +70,15 @@ const styles = StyleSheet.create({
 	},
 	scrollContent: {
 		paddingBottom: 40,
+	},
+	warning: {
+		padding: 16,
+		borderRadius: 12,
+		marginBottom: 16,
+	},
+	warningText: {
+		fontSize: 14,
+		fontWeight: '600',
+		textAlign: 'center',
 	},
 });

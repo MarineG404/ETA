@@ -55,7 +55,7 @@ export const BACResults: React.FC<BACResultsProps> = ({ result }) => {
 const styles = StyleSheet.create({
 	container: {
 		padding: 16,
-		borderRadius: 12,
+		borderRadius: 20,
 		marginBottom: 16,
 	},
 	title: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
 	},
 	mainResult: {
 		padding: 20,
-		borderRadius: 12,
+		borderRadius: 16,
 		alignItems: 'center',
 		marginBottom: 16,
 	},

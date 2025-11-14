@@ -1,14 +1,16 @@
 import { useTheme } from '@/context/ThemeContext';
+import { useProfile } from '@/context/ProfileContext';
 import { ThemedSwitcher } from '@/components/settings/ThemedSwicher';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { getColors } from '@/constants/Colors';
 import { Header } from '@/components/ui/header';
+import { ProfileForm } from '@/components/settings/ProfileForm';
 
 export default function SettingsScreen() {
 	const { isDark } = useTheme();
 	const colors = getColors(isDark);
-
+	const { profile, setProfile } = useProfile();
 	return (
 		<Header
 			emoji="⚙️"
@@ -21,6 +23,10 @@ export default function SettingsScreen() {
 				showsVerticalScrollIndicator={false}
 			>
 				<ThemedSwitcher />
+
+				<View style={styles.spacer} />
+
+				<ProfileForm profile={profile} onProfileChange={setProfile} />
 
 				<View style={styles.footer}>
 					<Text style={[styles.footerText, { color: colors.textSecondary }]}>
@@ -42,6 +48,9 @@ const styles = StyleSheet.create({
 	},
 	scrollContent: {
 		paddingBottom: 40,
+	},
+	spacer: {
+		height: 12, 
 	},
 	footer: {
 		alignItems: 'center',

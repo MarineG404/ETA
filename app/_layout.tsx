@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ProfileProvider } from '@/context/ProfileContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,7 +38,9 @@ export default function RootLayout() {
 
 	return (
 		<ThemeProvider>
-			<RootLayoutNav />
+			<ProfileProvider>
+				<RootLayoutNav />
+			</ProfileProvider>
 		</ThemeProvider>
 	);
 }

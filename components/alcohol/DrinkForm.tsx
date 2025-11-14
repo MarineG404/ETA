@@ -166,7 +166,7 @@ export const DrinkForm: React.FC<DrinkFormProps> = ({ onAddDrink }) => {
 const styles = StyleSheet.create({
 	container: {
 		padding: 16,
-		borderRadius: 12,
+		borderRadius: 20,
 		marginBottom: 16,
 	},
 	title: {

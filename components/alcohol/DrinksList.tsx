@@ -46,12 +46,12 @@ export const DrinksList: React.FC<DrinksListProps> = ({ drinks, onRemoveDrink })
 const styles = StyleSheet.create({
 	container: {
 		padding: 16,
-		borderRadius: 12,
+		borderRadius: 20,
 		marginBottom: 16,
 	},
 	emptyContainer: {
 		padding: 16,
-		borderRadius: 12,
+		borderRadius: 20,
 		alignItems: 'center',
 		marginBottom: 16,
 	},
