@@ -1,16 +1,29 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
+function RootLayoutNav() {
+	const { isDark } = useTheme();
+
+	return (
+		<NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+			<Stack>
+				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+			</Stack>
+			<StatusBar style={isDark ? 'light' : 'dark'} />
+		</NavThemeProvider>
+	);
+}
+
 export default function RootLayout() {
-	const [loaded] = useFonts({
-	});
+	const [loaded] = useFonts({});
 
 	useEffect(() => {
 		if (loaded) {
@@ -19,16 +32,12 @@ export default function RootLayout() {
 	}, [loaded]);
 
 	if (!loaded) {
-		// Async font loading only occurs in development.
 		return null;
 	}
 
 	return (
-		<>
-			<Stack>
-				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-			</Stack>
-			<StatusBar style="auto" />
-		</>
+		<ThemeProvider>
+			<RootLayoutNav />
+		</ThemeProvider>
 	);
 }

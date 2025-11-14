@@ -1,59 +1,75 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { CityData } from '@/utils/aperoDb';
-import { useAppColors } from '@/constants/Colors';
 import { DateTime } from 'luxon';
+import { useTheme } from '@/context/ThemeContext';
+import { getColors } from '@/constants/Colors';
+
+type CityData = {
+	city: string;
+	timezone: string;
+	specials: { type: string; name: string }[];
+};
 
 type CitiesCardProps = {
 	city: CityData;
 };
 
-const COLORS = useAppColors(); // ✅ palette dynamique
-
-
 export const CitiesCard: React.FC<CitiesCardProps> = ({ city }) => {
-	const getSpecial = (type: 'cocktail' | 'mocktail' | 'food') =>
-		city.specials.find(s => s.type === type)?.name || '—';
+	const { isDark } = useTheme();
+	const colors = getColors(isDark);
+
 	const localTime = DateTime.now().setZone(city.timezone).toFormat('HH:mm');
 
+	const cocktail = city.specials.find((s) => s.type === 'cocktail')?.name || '🍹 Cocktail';
+	const mocktail = city.specials.find((s) => s.type === 'mocktail')?.name || '🥤 Mocktail';
+	const food = city.specials.find((s) => s.type === 'food')?.name || '🍴 Plat';
+
 	return (
-		<View style={styles.card}>
-			<Text style={styles.cityName}>{city.city}</Text>
-			<Text style={styles.localTime}>🕒 {localTime}</Text>
-			<Text style={styles.timezone}>Timezone: {city.timezone}</Text>
-			<Text style={styles.special}>🍹 Cocktail: {getSpecial('cocktail')}</Text>
-			<Text style={styles.special}>🥤 Mocktail: {getSpecial('mocktail')}</Text>
-			<Text style={styles.special}>🍴 Food: {getSpecial('food')}</Text>
+		<View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+			<View style={styles.header}>
+				<Text style={[styles.cityName, { color: colors.text }]}>{city.city}</Text>
+				<Text style={[styles.time, { color: colors.primary }]}>{localTime}</Text>
+			</View>
+
+			<View style={styles.specialsContainer}>
+				<Text style={[styles.specialText, { color: colors.text }]}>🍸 {cocktail}</Text>
+				<Text style={[styles.specialText, { color: colors.text }]}>🥤 {mocktail}</Text>
+				<Text style={[styles.specialText, { color: colors.text }]}>🍴 {food}</Text>
+			</View>
 		</View>
 	);
 };
 
 const styles = StyleSheet.create({
 	card: {
-		backgroundColor: COLORS.cardBackground,
-		padding: 12,
-		marginVertical: 6,
-		borderRadius: 22,
+		borderRadius: 12,
+		padding: 16,
+		marginBottom: 12,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		elevation: 3,
+	},
+	header: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		marginBottom: 8,
 	},
 	cityName: {
-		fontSize: 16,
+		fontSize: 20,
 		fontWeight: 'bold',
-		color: COLORS.primary,
 	},
-	localTime: {
-		fontSize: 14,
-		color: COLORS.primary,
-		marginBottom: 4,
+	time: {
+		fontSize: 18,
+		fontWeight: '600',
 	},
-	timezone: {
-		fontSize: 12,
-		color: COLORS.textSecondary,
-		marginBottom: 6,
+	specialsContainer: {
+		gap: 4,
 	},
-	special: {
-		fontSize: 14,
-		color: COLORS.text,
+	specialText: {
+		fontSize: 15,
+		paddingVertical: 2,
 	},
 });
-
-export default CitiesCard;

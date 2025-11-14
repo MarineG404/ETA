@@ -1,44 +1,36 @@
-import { ScrollView, StyleSheet, Text } from "react-native";
-import { getTimezoneData } from "@/utils/getTimezoneData";
-import { useAppColors } from "@/constants/Colors";
+import React from 'react';
+import { View, StyleSheet, FlatList } from 'react-native';
+import { CitiesCard } from '@/components/Cities/CitiesCard';
 
-const COLORS = useAppColors(); // ✅ palette dynamique
+type CityData = {
+	city: string;
+	timezone: string;
+	specials: { type: string; name: string }[];
+};
 
-export function CitiesZone({ localTimezone }: { localTimezone: string }) {
+type CitiesZoneProps = {
+	cities: CityData[];
+};
 
-	const cities = getTimezoneData(localTimezone);
-
+export const CitiesZone: React.FC<CitiesZoneProps> = ({ cities }) => {
 	return (
-		<ScrollView contentContainerStyle={styles.citiesContainer} style={styles.citiesScroll}>
-			{cities.map(({ city, country }, index) => (
-				<Text key={index} style={styles.cityText}>
-					{city} {country ? `- ${country}` : ''}
-				</Text>
-			))}
-		</ScrollView>
-	)
-}
-
+		<View style={styles.container}>
+			<FlatList
+				data={cities}
+				keyExtractor={(item) => item.city}
+				renderItem={({ item }) => <CitiesCard city={item} />}
+				contentContainerStyle={styles.list}
+			/>
+		</View>
+	);
+};
 
 const styles = StyleSheet.create({
-	citiesScroll: {
-		width: '100%',
-		maxHeight: 200,
+	container: {
+		flex: 1,
 	},
-	citiesContainer: {
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-	},
-	cityText: {
-		fontSize: 14,
-		marginBottom: 6,
-		color: COLORS.text,
-	},
-	noCityText: {
-		fontSize: 14,
-		fontStyle: 'italic',
-		textAlign: 'center',
-		marginTop: 8,
-		color: COLORS.textSecondary,
+	list: {
+		padding: 16,
+		gap: 16,
 	},
 });

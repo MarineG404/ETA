@@ -1,48 +1,59 @@
-// import { useTheme } from "@/context/ThemeContext";
-// import React from "react";
-// import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTheme } from '@/context/ThemeContext';
+import { ThemedSwitcher } from '@/components/settings/ThemedSwicher';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { getColors } from '@/constants/Colors';
 
-// export default function SettingsScreen() {
-// 	const { themeMode, setThemeMode, COLORS } = useTheme();
+export default function SettingsScreen() {
+	const { isDark } = useTheme();
+	const colors = getColors(isDark); 
 
-// 	return (
-// 		<View style={[styles.container, { backgroundColor: COLORS.background }]}>
-// 			<Text style={[styles.title, { color: COLORS.primary }]}>Theme</Text>
+	return (
+		<ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+			<View style={styles.header}>
+				<Text style={[styles.headerTitle, { color: colors.text }]}>Paramètres</Text>
+				<Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+					Personnalise ton expérience ETA
+				</Text>
+			</View>
 
-// 			{(["light", "dark", "auto"] as const).map((mode) => (
-// 				<TouchableOpacity
-// 					key={mode}
-// 					style={[
-// 						styles.button,
-// 						{
-// 							backgroundColor: themeMode === mode ? COLORS.primary : COLORS.cardBackground,
-// 						},
-// 					]}
-// 					onPress={() => setThemeMode(mode)}
-// 				>
-// 					<Text
-// 						style={{
-// 							color: themeMode === mode ? COLORS.cardBackground : COLORS.text,
-// 							fontWeight: "bold",
-// 						}}
-// 					>
-// 						{mode.toUpperCase()}
-// 					</Text>
-// 				</TouchableOpacity>
-// 			))}
-// 		</View>
-// 	);
-// }
+			<ThemedSwitcher />
 
-// const styles = StyleSheet.create({
-// 	container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
-// 	title: { fontSize: 24, marginBottom: 16 },
-// 	button: {
-// 		paddingVertical: 12,
-// 		paddingHorizontal: 24,
-// 		borderRadius: 8,
-// 		marginVertical: 8,
-// 		width: "60%",
-// 		alignItems: "center",
-// 	},
-// });
+			<View style={styles.footer}>
+				<Text style={[styles.footerText, { color: colors.textSecondary }]}>
+					🍻 ETA - Estimate Time of Apero
+				</Text>
+				<Text style={[styles.footerText, { color: colors.textSecondary }]}>
+					Version 1.0.0
+				</Text>
+			</View>
+		</ScrollView>
+	);
+}
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	header: {
+		padding: 20,
+		paddingTop: 60,
+	},
+	headerTitle: {
+		fontSize: 32,
+		fontWeight: 'bold',
+		marginBottom: 8,
+	},
+	headerSubtitle: {
+		fontSize: 16,
+	},
+	footer: {
+		alignItems: 'center',
+		padding: 20,
+		marginTop: 40,
+	},
+	footerText: {
+		fontSize: 14,
+		marginVertical: 4,
+	},
+});

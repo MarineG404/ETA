@@ -1,6 +1,3 @@
-import { useColorScheme } from "react-native";
-
-
 export const COLORS_LIGHT = {
 	primary: "#FF6B35",        // Orange/corail vif pour les boutons
 	secondary: "#8B4513",      // Brun caramel pour textes secondaires
@@ -21,7 +18,6 @@ export const COLORS_DARK = {
 	accent: "#C77DFF",
 };
 
-export const useAppColors = () => {
-	const scheme = useColorScheme(); // 'light' | 'dark'
-	return scheme === 'dark' ? COLORS_DARK : COLORS_LIGHT;
+export const getColors = (isDark: boolean) => {
+	return isDark ? COLORS_DARK : COLORS_LIGHT;
 };
