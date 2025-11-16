@@ -1,72 +1,114 @@
 import React, { useEffect } from 'react';
-import * as Notifications from 'expo-notifications';
 import { getBACStatus } from '@/utils/alcoholCalculator';
+import Constants from 'expo-constants';
+
+// Pas d'import statique de expo-notifications
+const isExpoGo = Constants.appOwnership === 'expo';
+
+let Notifications: any = null;
+if (!isExpoGo) {
+    (async () => {
+        try {
+            const mod = await import('expo-notifications');
+            Notifications = mod;
+            Notifications.setNotificationHandler({
+                handleNotification: async () => ({
+                    shouldShowAlert: true,
+                    shouldPlaySound: true,
+                    shouldSetBadge: false,
+                }),
+            });
+        } catch {
+            console.log('⚠️ expo-notifications non disponible');
+        }
+    })();
+}
 
 type Prediction = { time: Date; bac: number };
 type Props = { predictions?: Prediction[] };
 
 export const PhaseNotifier: React.FC<Props> = ({ predictions }) => {
-	useEffect(() => {
-		let mounted = true;
-		const registerAndSchedule = async () => {
-			try {
-				const { status: existing } = await Notifications.getPermissionsAsync();
-				let finalStatus = existing;
-				if (existing !== 'granted') {
-					const { status } = await Notifications.requestPermissionsAsync();
-					finalStatus = status;
-				}
-				if (finalStatus !== 'granted') return;
+    useEffect(() => {
+        let mounted = true;
 
-				// Annule les notifications planifiées créées précédemment
-				await Notifications.cancelAllScheduledNotificationsAsync();
+        const schedulePhaseNotifications = async () => {
+            if (isExpoGo) {
+                console.log('🍺 Mode Expo Go: Notifications de phase simulées (dev)');
+                if (predictions?.length) {
+                    console.log(`📊 ${predictions.length} prédictions disponibles`);
+                }
+                return;
+            }
 
-				if (!predictions?.length) return;
+            if (!Notifications) {
+                console.log('⚠️ Notifications non disponibles');
+                return;
+            }
 
-				// Groupe par changement de statut et schedule
-				const segs: { status: { text: string; color: string }; start: Date }[] = [];
-				let prevStatus = getBACStatus(predictions[0].bac);
-				let start = predictions[0].time;
-				for (let i = 1; i < predictions.length; i++) {
-					const s = getBACStatus(predictions[i].bac);
-					if (s.text !== prevStatus.text) {
-						segs.push({ status: prevStatus, start });
-						prevStatus = s;
-						start = predictions[i].time;
-					}
-				}
-				segs.push({ status: prevStatus, start });
+            try {
+                // Demander permissions
+                const { status } = await Notifications.requestPermissionsAsync();
+                if (status !== 'granted') {
+                    console.log('⚠️ Permission notifications refusée');
+                    return;
+                }
 
-				for (const seg of segs) {
-					const when = seg.start;
-					const deltaMs = when.getTime() - Date.now();
-					if (deltaMs <= 0) continue;
+                // Annuler anciennes notifications
+                await Notifications.cancelAllScheduledNotificationsAsync();
 
-					// schedule in seconds to satisfy expo-notifications typings
-					const seconds = Math.max(1, Math.ceil(deltaMs / 1000));
+                if (!predictions?.length) return;
 
-					await Notifications.scheduleNotificationAsync({
-						content: {
-							title: `Phase : ${seg.status.text}`,
-							body: `Passage en ${seg.status.text} à ${when.toLocaleTimeString('fr-FR', {
-								hour: '2-digit',
-								minute: '2-digit',
-							})}`,
-							data: { type: 'phase_change', status: seg.status.text },
-						},
-						trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds, repeats: false }, // include required 'type'
-					});
-				}
-			} catch (e) {
-				// silent
-			}
-		};
+                // Regrouper par changement de statut
+                const segs: { status: { text: string; color: string }; start: Date }[] = [];
+                let prevStatus = getBACStatus(predictions[0].bac);
+                let start = predictions[0].time;
 
-		if (mounted) registerAndSchedule();
-		return () => {
-			mounted = false;
-		};
-	}, [predictions]);
+                for (let i = 1; i < predictions.length; i++) {
+                    const s = getBACStatus(predictions[i].bac);
+                    if (s.text !== prevStatus.text) {
+                        segs.push({ status: prevStatus, start });
+                        prevStatus = s;
+                        start = predictions[i].time;
+                    }
+                }
+                segs.push({ status: prevStatus, start });
 
-	return null;
+                // Planifier notifications pour chaque phase
+                for (const seg of segs) {
+                    const when = seg.start;
+                    const deltaMs = when.getTime() - Date.now();
+                    if (deltaMs <= 0) continue;
+
+                    const seconds = Math.max(1, Math.ceil(deltaMs / 1000));
+
+                    await Notifications.scheduleNotificationAsync({
+                        content: {
+                            title: `Phase : ${seg.status.text}`,
+                            body: `Passage en ${seg.status.text} à ${when.toLocaleTimeString('fr-FR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}`,
+                            sound: true,
+                            data: { type: 'phase_change', status: seg.status.text },
+                        },
+                        trigger: { seconds },
+                    });
+
+                    console.log(`✅ Notification planifiée: ${seg.status.text} dans ${Math.round(seconds / 60)}min`);
+                }
+            } catch (error) {
+                console.log('⚠️ Erreur planification notifications:', error);
+            }
+        };
+
+        if (mounted) {
+            schedulePhaseNotifications();
+        }
+
+        return () => {
+            mounted = false;
+        };
+    }, [predictions]);
+
+    return null;
 };
