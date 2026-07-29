@@ -1,195 +1,168 @@
-// Version scientifique et réaliste du calcul BAC
+// Modèle scientifique du taux d'alcoolémie (BAC)
 // ------------------------------------------------------------
-// Objectifs :
-// - Garder les mêmes variables / noms de fonctions pour intégration facile
-// - Utiliser la formule Watson pour le Total Body Water (plus précise que r fixe)
-// - Modéliser l'absorption par une fonction exponentielle (first-order)
-// - Calculer l'élimination en grammes/heure (ELIMINATION_RATE en g/L/h * TBW en L)
-// - Élimination concurrente à l'absorption (empêche des pics tardifs artificiels)
+// - Formule de Watson pour le Total Body Water (plus précise qu'un ratio fixe)
+// - Absorption modélisée par une courbe exponentielle par boisson (first-order)
+// - Élimination hépatique = cinétique d'ordre zéro (taux constant, ~0.15 g/L/h),
+//   appliquée UNE SEULE FOIS sur le pool total d'alcool dans le corps — pas par
+//   boisson. Le foie n'a qu'une seule capacité d'élimination ; l'appliquer en
+//   parallèle à chaque boisson ferait décroître le BAC N fois trop vite avec
+//   N boissons en cours d'absorption.
+// - Une simulation temporelle unique (grammes d'alcool dans le corps) est
+//   réutilisée pour le taux actuel, le pic et les prédictions.
 // ------------------------------------------------------------
 
 import { Drink, UserProfile, BACResult } from '@/types/alcohol';
 
-// Constantes
 const ALCOHOL_DENSITY = 0.789; // g/mL
-// ELIMINATION_RATE : g/L/h (typique : 0.10 - 0.20) -> 0.15 par défaut
-const ELIMINATION_RATE = 0.15;
+const ELIMINATION_RATE = 0.15; // g/L/h (Widmark, typique 0.10-0.20)
+const ABSORPTION_TIME = 0.75; // heures (~45 min), échelle de temps jusqu'au pic d'absorption
 
-// Paramètre d'absorption (valeur de base, modifiable)
-// ABSORPTION_TIME est utilisé comme "échelle" pour estimer le temps vers le pic
-const ABSORPTION_TIME = 0.75; // heures (≈45 minutes)
-
-// --- Utils: Watson formula pour estimer le Total Body Water (en litres)
-// On utilise âge si disponible dans profile, sinon on prend une valeur par défaut.
+// Total Body Water (litres) via la formule de Watson
 const estimateTBW = (profile: UserProfile): number => {
-  const weight = profile.weight; // kg
-  const height = profile.height || 170; // cm, fallback 170
-  const age = profile.age || 30; // années, fallback 30
+	const weight = profile.weight; // kg
+	const height = profile.height || 170; // cm, fallback
+	const age = profile.age || 30; // années, fallback
 
-  if (!profile.gender || !weight) return 0;
+	if (!profile.gender || !weight) return 0;
 
-  // Formules Watson (litres)
-  if (profile.gender === 'male') {
-    // TBW = 2.447 - 0.09516*age + 0.1074*height(cm) + 0.3362*weight(kg)
-    return 2.447 - 0.09516 * age + 0.1074 * height + 0.3362 * weight;
-  } else {
-    // TBW = -2.097 + 0.1069*height + 0.2466*weight
-    return -2.097 + 0.1069 * height + 0.2466 * weight;
-  }
+	if (profile.gender === 'male') {
+		return 2.447 - 0.09516 * age + 0.1074 * height + 0.3362 * weight;
+	}
+	return -2.097 + 0.1069 * height + 0.2466 * weight;
 };
 
-// Ancienne fonction getWaterContent conservée pour compatibilité (retourne largeur d'eau estimée r)
-const getWaterContent = (gender: 'male' | 'female'): number => {
-  return gender === 'male' ? 0.68 : 0.55;
+const calculateAlcoholGrams = (drink: Drink): number =>
+	drink.volume * (drink.alcohol / 100) * ALCOHOL_DENSITY; // g
+
+// Temps estimé (h) jusqu'au pic d'absorption d'une boisson : milieu de la
+// consommation + un décalage lié à l'absorption digestive
+const peakTimeHoursFor = (drink: Drink): number => {
+	const drinkDuration = Math.max(0, (drink.endTime.getTime() - drink.startTime.getTime()) / 3_600_000);
+	return drinkDuration / 2 + ABSORPTION_TIME * 0.5;
 };
 
-// Calcul des grammes d'alcool pur
-const calculateAlcoholGrams = (drink: Drink): number => {
-  // drink.volume en mL, drink.alcohol en % (ex: 5 pour 5%)
-  return (drink.volume * (drink.alcohol / 100)) * ALCOHOL_DENSITY; // g
-};
-
-// Fonction d'absorption (first-order approché)
-// - peakTimeHours : temps (h) attendu jusqu'au pic depuis le début de la boisson
-// On choisit k tel que la fraction atteigne ~95% au moment du pic : k = -ln(0.05)/peak
+// Fraction cumulative d'alcool absorbée à hoursFromStart (atteint ~95% au pic)
 const absorptionFraction = (hoursFromStart: number, peakTimeHours: number): number => {
-  if (hoursFromStart <= 0) return 0;
-  const k = -Math.log(0.05) / Math.max(peakTimeHours, 0.01); // évite division par 0
-  const frac = 1 - Math.exp(-k * hoursFromStart);
-  return Math.min(1, frac);
+	if (hoursFromStart <= 0) return 0;
+	const k = -Math.log(0.05) / Math.max(peakTimeHours, 0.01); // évite division par 0
+	return Math.min(1, 1 - Math.exp(-k * hoursFromStart));
 };
 
-// Calcul du taux d'alcoolémie pour une boisson (modèle scientifique)
-const calculateDrinkBAC = (drink: Drink, profile: UserProfile, currentTime: Date): number => {
-  if (!profile.gender || !profile.weight) return 0;
+type SimPoint = { time: Date; grams: number };
 
-  const alcoholGrams = calculateAlcoholGrams(drink); // g
+// Simule le pool total d'alcool (g) dans le corps entre `from` et `to`.
+// Chaque boisson suit sa propre courbe d'absorption, mais l'élimination
+// s'applique une seule fois sur le total absorbé, comme le ferait le foie.
+const simulate = (drinks: Drink[], tbw: number, from: Date, to: Date, stepMinutes: number): SimPoint[] => {
+	if (tbw <= 0 || drinks.length === 0 || to.getTime() < from.getTime()) return [];
 
-  // Estimation du TBW (litres) via Watson (plus précis que r * poids)
-  const tbw = estimateTBW(profile); // L
-  if (tbw <= 0) return 0;
+	const elimGramsPerHour = ELIMINATION_RATE * tbw;
+	const stepMs = stepMinutes * 60_000;
+	const drinkMeta = drinks.map(d => ({
+		grams: calculateAlcoholGrams(d),
+		peak: peakTimeHoursFor(d),
+		startMs: d.startTime.getTime(),
+	}));
+	const prevAbsorbed = drinkMeta.map(() => 0);
 
-  // Durée de consommation (heures)
-  const drinkDuration = (drink.endTime.getTime() - drink.startTime.getTime()) / (1000 * 60 * 60);
-  const hoursFromStart = (currentTime.getTime() - drink.startTime.getTime()) / (1000 * 60 * 60);
+	const points: SimPoint[] = [];
+	let grams = 0;
 
-  // Estimation du temps jusqu'au pic (en heures) : on base sur la durée + ABSORPTION_TIME
-  // Approche : pic ≈ milieu de la consommation + un petit décalage (ABSORPTION_TIME * 0.5)
-  const peakTimeHours = (Math.max(0, drinkDuration) / 2) + (ABSORPTION_TIME * 0.5);
+	for (let t = from.getTime(); t <= to.getTime(); t += stepMs) {
+		let absorbedDelta = 0;
+		drinkMeta.forEach((d, i) => {
+			const hours = (t - d.startMs) / 3_600_000;
+			const absorbedSoFar = d.grams * absorptionFraction(hours, d.peak);
+			absorbedDelta += absorbedSoFar - prevAbsorbed[i];
+			prevAbsorbed[i] = absorbedSoFar;
+		});
 
-  // Fraction d'alcool absorbée jusqu'à l'instant t
-  const fracAbsorbed = absorptionFraction(hoursFromStart, peakTimeHours);
+		grams = Math.max(0, grams + absorbedDelta - elimGramsPerHour * (stepMinutes / 60));
+		points.push({ time: new Date(t), grams });
+	}
 
-  // Quantité d'alcool présente dans le corps (grammes), en tenant compte de l'absorption
-  const gramsAbsorbed = alcoholGrams * fracAbsorbed;
-
-  // Taux d'élimination en grammes/heure = ELIMINATION_RATE (g/L/h) * TBW (L)
-  const elimGramsPerHour = ELIMINATION_RATE * tbw;
-
-  // Élimination totale depuis le début (on considère que l'élimination commence dès qu'il y a alcool absorbé)
-  const gramsEliminated = Math.max(0, hoursFromStart * elimGramsPerHour);
-
-  // Quantité nette d'alcool encore dans le corps (grammes)
-  const gramsNet = Math.max(0, gramsAbsorbed - gramsEliminated);
-
-  // BAC instantané en g/L = gramsNet / TBW
-  const bac = gramsNet / tbw;
-
-  return bac;
+	return points;
 };
 
-// Calcul du taux d'alcoolémie total avec pic (version scientifique)
+// Calcul du taux d'alcoolémie actuel + pic (modèle scientifique)
 export const calculateBAC = (drinks: Drink[], profile: UserProfile): BACResult => {
-  if (!profile.gender || !profile.weight || drinks.length === 0) {
-    return {
-      currentBAC: 0,
-      peakBAC: 0,
-      peakTime: new Date(),
-      soberTime: null,
-      status: { text: 'Sobre ✅', color: '#4CAF50' },
-    };
-  }
+	const tbw = estimateTBW(profile);
 
-  const now = new Date();
-  let currentBAC = 0;
-  let peakBAC = 0;
-  let peakTime = now;
+	if (!profile.gender || !profile.weight || tbw <= 0 || drinks.length === 0) {
+		return {
+			currentBAC: 0,
+			peakBAC: 0,
+			peakTime: new Date(),
+			soberTime: null,
+			status: { text: 'Sobre ✅', color: '#4CAF50' },
+		};
+	}
 
-  // BAC actuel : somme des contributions de chaque boisson
-  drinks.forEach(drink => {
-    currentBAC += calculateDrinkBAC(drink, profile, now);
-  });
+	const now = new Date();
+	const earliest = new Date(Math.min(...drinks.map(d => d.startTime.getTime())));
+	const latest = Math.max(...drinks.map(d => d.endTime.getTime())) + 2 * 60 * 60 * 1000; // +2h
+	const searchEnd = new Date(Math.max(now.getTime(), latest));
 
-  // Recherche du pic : on parcourt de (début de la première boisson) -> (2h après la dernière)
-  const earliest = drinks.reduce((min, d) => Math.min(min, d.startTime.getTime()), drinks[0].startTime.getTime());
-  const latest = drinks.reduce((max, d) => Math.max(max, d.endTime.getTime()), drinks[0].endTime.getTime());
+	// résolution 1 minute pour précision scientifique
+	const points = simulate(drinks, tbw, earliest, searchEnd, 1);
 
-  const searchStart = earliest;
-  const searchEnd = latest + 2 * 60 * 60 * 1000; // +2h
+	let peakBAC = 0;
+	let peakTime = now;
+	let currentBAC = 0;
 
-  for (let t = searchStart; t <= searchEnd; t += 60 * 1000) { // résolution 1 minute pour précision scientifique
-    const testTime = new Date(t);
-    let testBAC = 0;
-    drinks.forEach(drink => {
-      testBAC += calculateDrinkBAC(drink, profile, testTime);
-    });
+	for (const p of points) {
+		const bac = p.grams / tbw;
+		if (bac > peakBAC) {
+			peakBAC = bac;
+			peakTime = p.time;
+		}
+		if (p.time.getTime() <= now.getTime()) {
+			currentBAC = bac;
+		}
+	}
 
-    if (testBAC > peakBAC) {
-      peakBAC = testBAC;
-      peakTime = testTime;
-    }
-  }
+	const soberTime = calculateSoberTime(peakBAC, peakTime, profile);
 
-  const soberTime = calculateSoberTime(peakBAC, peakTime, profile);
-
-  return {
-    currentBAC: Math.round(currentBAC * 1000) / 1000,
-    peakBAC: Math.round(peakBAC * 1000) / 1000,
-    peakTime,
-    soberTime,
-    status: getBACStatus(currentBAC),
-  };
+	return {
+		currentBAC: Math.round(currentBAC * 1000) / 1000,
+		peakBAC: Math.round(peakBAC * 1000) / 1000,
+		peakTime,
+		soberTime,
+		status: getBACStatus(currentBAC),
+	};
 };
 
-// Calcul du temps avant sobriété (depuis le pic)
+// Temps avant sobriété depuis le pic : une fois l'absorption terminée, le BAC
+// décroît linéairement à ELIMINATION_RATE (g/L/h)
 export const calculateSoberTime = (peakBAC: number, peakTime: Date, profile: UserProfile): Date | null => {
-  if (peakBAC <= 0.01 || !profile.gender || !profile.weight) return null;
+	if (peakBAC <= 0.01 || !profile.gender || !profile.weight) return null;
 
-  // Analytique : heures = peakBAC / ELIMINATION_RATE (puisque ELIMINATION_RATE est en g/L/h)
-  const hoursToSober = peakBAC / ELIMINATION_RATE;
-  return new Date(peakTime.getTime() + hoursToSober * 60 * 60 * 1000);
+	const hoursToSober = peakBAC / ELIMINATION_RATE;
+	return new Date(peakTime.getTime() + hoursToSober * 60 * 60 * 1000);
 };
 
 // Statut en fonction du taux (g/L)
 export const getBACStatus = (bac: number) => {
-  if (bac < 0.01) return { text: 'Sobre ✅', color: '#4CAF50' };
-  if (bac < 0.2) return { text: 'Effet minimal 🟢', color: '#8BC34A' };
-  if (bac < 0.5) return { text: 'Légèrement alcoolisé ⚠️', color: '#FFC107' };
-  if (bac < 0.8) return { text: 'Limite légale dépassée 🚫', color: '#FF9800' };
-  if (bac < 1.5) return { text: 'Fortement alcoolisé ⛔', color: '#F44336' };
-  return { text: 'Danger ! 🚨', color: '#D32F2F' };
+	if (bac < 0.01) return { text: 'Sobre ✅', color: '#4CAF50' };
+	if (bac < 0.2) return { text: 'Effet minimal 🟢', color: '#8BC34A' };
+	if (bac < 0.5) return { text: 'Légèrement alcoolisé ⚠️', color: '#FFC107' };
+	if (bac < 0.8) return { text: 'Limite légale dépassée 🚫', color: '#FF9800' };
+	if (bac < 1.5) return { text: 'Fortement alcoolisé ⛔', color: '#F44336' };
+	return { text: 'Danger ! 🚨', color: '#D32F2F' };
 };
 
 // Prédictions pour les prochaines heures (résolution 5 minutes)
 export const predictBAC = (drinks: Drink[], profile: UserProfile, hoursAhead: number = 6): { time: Date; bac: number }[] => {
-  if (!profile.gender || !profile.weight) return [];
+	const tbw = estimateTBW(profile);
+	if (!profile.gender || !profile.weight || tbw <= 0 || drinks.length === 0) return [];
 
-  const predictions: { time: Date; bac: number }[] = [];
-  const now = new Date();
+	const now = new Date();
+	const earliest = new Date(Math.min(...drinks.map(d => d.startTime.getTime()), now.getTime()));
+	const horizon = new Date(now.getTime() + hoursAhead * 60 * 60 * 1000);
 
-  for (let minutes = 0; minutes <= hoursAhead * 60; minutes += 5) {
-    const futureTime = new Date(now.getTime() + minutes * 60 * 1000);
-    let futureBac = 0;
+	const points = simulate(drinks, tbw, earliest, horizon, 5);
 
-    drinks.forEach(drink => {
-      futureBac += calculateDrinkBAC(drink, profile, futureTime);
-    });
-
-    predictions.push({
-      time: futureTime,
-      bac: Math.round(futureBac * 1000) / 1000,
-    });
-  }
-
-  return predictions;
+	return points
+		.filter(p => p.time.getTime() >= now.getTime())
+		.map(p => ({ time: p.time, bac: Math.round((p.grams / tbw) * 1000) / 1000 }));
 };
