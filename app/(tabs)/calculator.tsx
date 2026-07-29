@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrinkForm } from '@/components/alcohol/DrinkForm';
 import { DrinksList } from '@/components/alcohol/DrinksList';
 import { BACResults } from '@/components/alcohol/BACResults';
@@ -9,9 +10,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { getColors } from '@/constants/Colors';
 import { Header } from '@/components/ui/header';
-import * as Notifications from 'expo-notifications';
-import { getBACStatus } from '@/utils/alcoholCalculator';
 import { PhaseNotifier } from '@/components/notifications/PhaseNotifier'; // nouveau
+
+const DRINKS_STORAGE_KEY = 'drinks';
 
 export default function CalculatorScreen() {
 	const { isDark } = useTheme();
@@ -21,6 +22,39 @@ export default function CalculatorScreen() {
 	const [drinks, setDrinks] = useState<Drink[]>([]);
 	const [result, setResult] = useState(calculateBAC([], profile));
 	const [predictions, setPredictions] = useState<{ time: Date; bac: number }[]>([]); // nouveau
+
+	// Évite d'écraser le stockage avec le tableau vide initial avant la fin du chargement
+	const hasLoadedDrinks = useRef(false);
+
+	// Charger les boissons sauvegardées au démarrage
+	useEffect(() => {
+		const loadDrinks = async () => {
+			try {
+				const saved = await AsyncStorage.getItem(DRINKS_STORAGE_KEY);
+				if (saved) {
+					const parsed: Drink[] = JSON.parse(saved).map((d: Drink) => ({
+						...d,
+						startTime: new Date(d.startTime),
+						endTime: new Date(d.endTime),
+					}));
+					setDrinks(parsed);
+				}
+			} catch (error) {
+				console.error('Erreur chargement boissons:', error);
+			} finally {
+				hasLoadedDrinks.current = true;
+			}
+		};
+		loadDrinks();
+	}, []);
+
+	// Sauvegarder les boissons quand elles changent
+	useEffect(() => {
+		if (!hasLoadedDrinks.current) return;
+		AsyncStorage.setItem(DRINKS_STORAGE_KEY, JSON.stringify(drinks)).catch((error) => {
+			console.error('Erreur sauvegarde boissons:', error);
+		});
+	}, [drinks]);
 
 	useEffect(() => {
 		const r = calculateBAC(drinks, profile);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, ScrollView, Alert } from 'react-native';
 import { Drink } from '@/types/alcohol';
 import { useTheme } from '@/context/ThemeContext';
 import { getColors } from '@/constants/Colors';
@@ -43,12 +43,12 @@ export const DrinkForm: React.FC<DrinkFormProps> = ({ onAddDrink }) => {
 
 	const handleSubmit = () => {
 		if (!name || !volume || !alcohol) {
-			alert('Remplis tous les champs !');
+			Alert.alert('Remplis tous les champs !');
 			return;
 		}
 
 		if (endTime <= startTime) {
-			alert('L\'heure de fin doit être après l\'heure de début !');
+			Alert.alert('L\'heure de fin doit être après l\'heure de début !');
 			return;
 		}
 

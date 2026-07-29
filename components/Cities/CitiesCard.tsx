@@ -3,13 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/context/ThemeContext';
 import { getColors } from '@/constants/Colors';
-
-type CityData = {
-	city: string;
-	country?: string;
-	timezone: string;
-	specials: { type: string; name: string }[];
-};
+import { CityData } from '@/types/city';
 
 type CitiesCardProps = {
 	city: CityData;

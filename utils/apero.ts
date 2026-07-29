@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { CityData } from './aperoDb';
+import { CityData } from '@/types/city';
 
 const aperoStart = '18:00';
 const aperoEnd = '19:30';

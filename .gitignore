@@ -40,3 +40,6 @@ yarn-error.*
 
 app-example
 pov.json
+
+app-release.apk
+app-release-apk.zip

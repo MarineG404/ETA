@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { resetDatabase, getCityData, CityData } from '@/utils/aperoDb';
+import { CITIES } from '@/utils/citiesData';
 import { CitiesCard } from '@/components/Cities/CitiesCard';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getCitiesForApero } from '@/utils/apero';
@@ -11,32 +11,16 @@ export default function HomeScreen() {
 	const { isDark } = useTheme();
 	const COLORS = getColors(isDark);
 
-	const [cities, setCities] = useState<CityData[]>([]);
+	// CITIES est statique : ce tick ne sert qu'à re-déclencher le rendu
+	// pour que getCitiesForApero() ré-évalue l'heure courante par ville.
+	const [, forceTick] = useState(0);
 
 	useEffect(() => {
-		const initDb = async () => {
-			await resetDatabase();
-			await fetchCities();
-		};
-		initDb();
-	}, []);
-
-	const fetchCities = async () => {
-		try {
-			const data = await getCityData();
-			setCities(data);
-		} catch (error) {
-			console.error('Erreur en récupérant les villes:', error);
-			setCities([]);
-		}
-	};
-
-	useEffect(() => {
-		const interval = setInterval(fetchCities, 60000);
+		const interval = setInterval(() => forceTick(t => t + 1), 60000);
 		return () => clearInterval(interval);
 	}, []);
 
-	const citiesForApero = getCitiesForApero(cities);
+	const citiesForApero = getCitiesForApero(CITIES);
 
 	return (
 		<Header
