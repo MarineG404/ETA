@@ -135,7 +135,7 @@ Le modèle simule le pool total d'alcool dans le corps : chaque boisson suit sa 
 
 ## 📜 Licence
 
-À venir
+Ce projet est sous licence **MIT** — libre d'utilisation, de modification et de distribution, y compris à des fins commerciales, à condition de mentionner l'auteure originale (**GONNORD Marine**) et de conserver la notice de copyright. Voir le fichier [`LICENSE`](LICENSE) pour le texte complet.
 
 ---
 
